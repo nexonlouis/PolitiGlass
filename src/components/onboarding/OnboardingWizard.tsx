@@ -27,6 +27,7 @@ export function OnboardingWizard() {
   const [step, setStep] = useState<Step>("location");
   const [address, setAddress] = useState("");
   const [lookup, setLookup] = useState<DistrictLookupResult | null>(null);
+  const [lookupSource, setLookupSource] = useState<string | null>(null);
   const [demographics, setDemographics] = useState<DemographicsInput>({});
   const [suggestedSlugs, setSuggestedSlugs] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -63,6 +64,7 @@ export function OnboardingWizard() {
         source: data.source,
       };
       setLookup(result);
+      setLookupSource(data.source ?? null);
       saveOnboardingDraft({ lookup: result });
       setStep("demographics");
     } catch (e) {
@@ -177,12 +179,13 @@ export function OnboardingWizard() {
         <Card>
           <h2 className="text-xl font-semibold">Clear the fog</h2>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Enter your address to locate the officials representing you. We store
-            your district, not your full street address, when you create an account.
+            Enter your full US address (street, city, ST zip) to locate your
+            officials from live government data. We store your district, not your
+            street address, when you create an account.
           </p>
           <div className="mt-4 space-y-3">
             <Input
-              placeholder="123 Main St, City, ST 12345"
+              placeholder="440 Burroughs St, Detroit, MI 48202"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
@@ -196,6 +199,13 @@ export function OnboardingWizard() {
 
       {step === "demographics" && lookup && (
         <Card>
+          <p className="mb-3 text-xs text-emerald-700 dark:text-emerald-400">
+            Found {lookup.representatives.length} officials in district{" "}
+            {lookup.congressionalDistrict}
+            {lookupSource && lookupSource !== "demo"
+              ? ` · Live data (${lookupSource})`
+              : ""}
+          </p>
           <h2 className="text-xl font-semibold">Calibrate your reflection</h2>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Optional details help suggest issues you may care about. Skip any field

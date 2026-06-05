@@ -1,8 +1,44 @@
+import { parseUsAddress } from "@/lib/address/parse-us-address";
 import type { DistrictLookupResult, Representative } from "@/lib/types";
 
 const DEFAULT_BASE = "https://civdotiq.org/api/v1";
 
+/** CIV.IQ address intelligence (requires street, city, state). */
+export async function lookupViaCiviqStructured(
+  address: string,
+): Promise<DistrictLookupResult | null> {
+  const parsed = parseUsAddress(address);
+  if (!parsed?.street || !parsed.city || !parsed.state) return null;
+
+  const base = process.env.CIVIQ_API_BASE_URL ?? DEFAULT_BASE;
+  const intelligenceUrl =
+    base.replace(/\/v1\/?$/, "") + "/intelligence/address/representatives";
+
+  try {
+    const res = await fetch(intelligenceUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        street: parsed.street,
+        city: parsed.city,
+        state: parsed.state,
+        zip: parsed.zip ?? undefined,
+      }),
+      next: { revalidate: 86400 },
+    });
+
+    if (!res.ok) return null;
+    return mapCiviqAddressPayload(await res.json(), address);
+  } catch (err) {
+    console.error("CIV.IQ structured lookup failed", err);
+    return null;
+  }
+}
+
 export async function lookupViaCiviq(address: string): Promise<DistrictLookupResult | null> {
+  const structured = await lookupViaCiviqStructured(address);
+  if (structured && structured.representatives.length > 0) return structured;
+
   const base = process.env.CIVIQ_API_BASE_URL ?? DEFAULT_BASE;
   const intelligenceUrl = base.replace(/\/v1\/?$/, "") + "/intelligence/address/representatives";
 
@@ -44,22 +80,32 @@ function mapCiviqAddressPayload(
 ): DistrictLookupResult | null {
   const data = payload as {
     congressionalDistrict?: string;
+    district?: string;
     state?: string;
     representatives?: Array<Record<string, unknown>>;
+    senators?: Array<Record<string, unknown>>;
     federal?: Array<Record<string, unknown>>;
   };
 
-  const rawList = data.representatives ?? data.federal ?? [];
-  if (!Array.isArray(rawList) || rawList.length === 0) return null;
+  const houseList = data.representatives ?? data.federal ?? [];
+  const senateList = data.senators ?? [];
+  const rawList = [...(Array.isArray(houseList) ? houseList : []), ...(Array.isArray(senateList) ? senateList : [])];
+  if (rawList.length === 0) return null;
 
   const representatives = rawList.map(mapCiviqRep).filter(Boolean) as Representative[];
   const state =
     data.state ?? representatives[0]?.state ?? guessStateFromAddress(address) ?? "US";
 
+  const rawDistrict = data.congressionalDistrict ?? data.district;
   const congressionalDistrict =
-    data.congressionalDistrict ??
-    representatives.find((r) => r.chamber === "house")?.district ??
-    "unassigned";
+    rawDistrict && rawDistrict !== "98"
+      ? normalizeDistrict(String(rawDistrict), state)
+      : representatives.find((r) => r.chamber === "house")?.district
+        ? normalizeDistrict(
+            representatives.find((r) => r.chamber === "house")!.district!,
+            state,
+          )
+        : "unassigned";
 
   return {
     congressionalDistrict: normalizeDistrict(congressionalDistrict, state),

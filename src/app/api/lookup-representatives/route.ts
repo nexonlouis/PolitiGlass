@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       lookupZip: result.lookupZip,
       representatives: result.representatives,
       source: result.source,
+      liveData: result.source !== "demo",
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Lookup failed";

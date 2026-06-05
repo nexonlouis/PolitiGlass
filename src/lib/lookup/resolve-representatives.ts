@@ -1,10 +1,17 @@
-import { demoLookup, lookupViaCiviq } from "@/lib/external/civiq";
+import { lookupViaCiviq, lookupViaCiviqStructured, demoLookup } from "@/lib/external/civiq";
+import { lookupViaCongressGov } from "@/lib/external/congress-members";
 import { lookupViaGeocodio } from "@/lib/external/geocodio";
 import type { DistrictLookupResult } from "@/lib/types";
 
 export async function resolveRepresentatives(address: string): Promise<DistrictLookupResult> {
   const geocodio = await lookupViaGeocodio(address);
   if (geocodio && geocodio.representatives.length > 0) return geocodio;
+
+  const congress = await lookupViaCongressGov(address);
+  if (congress && congress.representatives.length > 0) return congress;
+
+  const civiqStructured = await lookupViaCiviqStructured(address);
+  if (civiqStructured && civiqStructured.representatives.length > 0) return civiqStructured;
 
   const civiq = await lookupViaCiviq(address);
   if (civiq && civiq.representatives.length > 0) return civiq;
@@ -14,6 +21,6 @@ export async function resolveRepresentatives(address: string): Promise<DistrictL
   }
 
   throw new Error(
-    "Unable to resolve representatives. Configure GEOCODIO_API_KEY or enable CIVIC_MIRROR_DEMO_MODE.",
+    "Unable to resolve representatives. Use a full US address (street, city, ST zip) or set GEOCODIO_API_KEY.",
   );
 }

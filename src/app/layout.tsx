@@ -42,6 +42,9 @@ export default function RootLayout({
               <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
                 Dashboard
               </Link>
+              <Link href="/forum" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
+                Forum
+              </Link>
               <Link href="/auth" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
                 Sign in
               </Link>

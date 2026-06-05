@@ -18,7 +18,7 @@ export interface DistrictLookupResult {
   ocdDivisionId: string | null;
   lookupZip: string | null;
   representatives: Representative[];
-  source: "geocodio" | "civiq" | "demo";
+  source: "geocodio" | "civiq" | "congress.gov" | "demo";
 }
 
 export interface DemographicsInput {

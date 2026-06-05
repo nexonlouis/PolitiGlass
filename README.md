@@ -24,16 +24,19 @@ Copy `.env.example` to `.env.local` and fill in values:
 cp .env.example .env.local
 ```
 
-For local UI exploration without API keys, keep:
+For live official lookup, set your Congress.gov key and use a full address:
 
 ```env
-CIVIC_MIRROR_DEMO_MODE=true
+CONGRESS_GOV_API_KEY=your_key
+CIVIC_MIRROR_DEMO_MODE=false
 ```
+
+Optional: `GEOCODIO_API_KEY` for Geocodio-first lookup.
 
 ### 3. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migration in the SQL editor: `supabase/migrations/001_initial_schema.sql`
+2. Run migrations in the SQL editor: `001_initial_schema.sql` then `002_forum_realtime.sql`
 3. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and optionally `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`.
 4. Enable Email auth under Authentication → Providers.
 
@@ -52,7 +55,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `/` | Landing |
 | `/onboarding` | 4-step calibration flow |
 | `/auth` | Sign up / sign in |
-| `/dashboard` | Officials, reflection score, forum placeholder |
+| `/dashboard` | Officials, reflection score, forum preview |
+| `/forum` | District discussion board (posts, votes, comments) |
 
 ## API routes
 
@@ -61,6 +65,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `/api/lookup-representatives` | POST | No |
 | `/api/suggest-tags` | POST | No |
 | `/api/voting-records` | GET | No |
+| `/api/health/data-sources` | GET | No |
 | `/api/reflection-score` | GET | No |
 | `/api/onboarding/complete` | POST | Yes |
 
@@ -68,7 +73,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 - **Geocodio** — address → legislators ([geocod.io](https://www.geocod.io/))
 - **CIV.IQ** — fallback / unified civic API ([civdotiq.org](https://www.civdotiq.org/developers))
-- **Congress.gov API** — House roll-call votes ([api.congress.gov](https://api.congress.gov/))
+- **Congress.gov API** — current members + House roll-call votes ([api.congress.gov](https://api.congress.gov/))
+- **US Census Geocoder** — address → congressional district (free, no key)
 - **LegiScan / CIV.IQ** — recommended for Senate and state votes (not wired in MVP)
 
 ## Privacy model
@@ -78,7 +84,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Next steps
 
-- [ ] District discussion board UI + Supabase Realtime
+- [x] District discussion board UI + Supabase Realtime
 - [ ] Bill → issue tag cache + LLM batch labeling
 - [ ] Senate votes via LegiScan or CIV.IQ
 - [ ] YouTube curated feed per representative

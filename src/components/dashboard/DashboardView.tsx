@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { RepresentativeCard } from "@/components/representatives/RepresentativeCard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { loadOnboardingDraft } from "@/lib/onboarding/storage";
 import type { ReflectionScoreResult, Representative } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { DistrictForum } from "@/components/forum/DistrictForum";
+import Link from "next/link";
 
 export function DashboardView() {
   const [reps, setReps] = useState<Representative[]>([]);
@@ -182,13 +183,17 @@ export function DashboardView() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">District forum</h2>
-        <Card>
-          <p className="text-sm text-slate-600">
-            Discussion board schema and RLS are ready. Post UI is next — your district
-            is {district ?? "not set"}.
-          </p>
-        </Card>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">District forum</h2>
+          <Link href="/forum" className="text-sm text-slate-600 underline">
+            Open full forum
+          </Link>
+        </div>
+        <DistrictForum
+          compact
+          initialDistrict={district}
+          initialIssueTags={tags}
+        />
       </section>
     </div>
   );

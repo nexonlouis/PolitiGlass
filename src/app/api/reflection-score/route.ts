@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchHouseVotesForMember } from "@/lib/external/congress";
+import { fetchMemberVotesFromDb } from "@/lib/legislation/member-votes-db";
 import { computeReflectionScore } from "@/lib/legislation/reflection-score";
 import { reflectionQuerySchema } from "@/lib/validation/api";
 
@@ -21,14 +21,16 @@ export async function GET(request: Request) {
     tagWeights[tag] = Number(searchParams.get(`weight_${tag}`)) || 3;
   }
 
-  const votes = await fetchHouseVotesForMember(bioguideParsed.data.bioguideId);
-  const scoredVotes = votes.map((v) => ({
-    ...v,
-    issueSlug: tags[0] ?? v.issueSlug,
-    userSupportsBill: true,
-  }));
+  const votes = await fetchMemberVotesFromDb(bioguideParsed.data.bioguideId, {
+    limit: 40,
+    userTags: tags,
+  });
 
-  const result = computeReflectionScore(scoredVotes, tagWeights);
+  const result = computeReflectionScore(votes, tagWeights);
 
-  return NextResponse.json(result);
+  return NextResponse.json({
+    ...result,
+    source: "database",
+    bioguideId: bioguideParsed.data.bioguideId,
+  });
 }

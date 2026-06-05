@@ -6,6 +6,8 @@ const BASE_SUGGESTIONS = [
   "housing-affordability",
   "infrastructure",
   "civil-rights",
+  "foreign-policy",
+  "national-security",
 ];
 
 /**

@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 .npm-cache
+scripts/**/node_modules
+scripts/**/.env
 *.pem
 
 # debug

@@ -1,0 +1,20 @@
+{
+  "name": "civic-mirror-tag-bills",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tag": "tsx tag-bills.ts",
+    "tag:dry": "tsx tag-bills.ts --dry-run",
+    "tag:ollama": "tsx ollama-tag.ts",
+    "tag:ollama:dry": "tsx ollama-tag.ts --dry-run --limit=5",
+    "tag:compare": "tsx tag-bills.ts --dry-run --limit=10 && tsx ollama-tag.ts --dry-run --limit=10"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

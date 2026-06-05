@@ -36,7 +36,7 @@ Optional: `GEOCODIO_API_KEY` for Geocodio-first lookup.
 ### 3. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run migrations in the SQL editor: `001_initial_schema.sql` then `002_forum_realtime.sql`
+2. Run migrations in the SQL editor: `001`–`006` (including `006_vote_scoring_relevant.sql`)
 3. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and optionally `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`.
 4. Enable Email auth under Authentication → Providers.
 
@@ -82,11 +82,18 @@ Open [http://localhost:3000](http://localhost:3000).
 - `profiles` — username, avatar, **district only** (community-visible)
 - `user_demographics` — income bracket, education, issue tags (RLS: owner-only)
 
+## Congress vote ingestion (batch)
+
+For House **and** Senate roll-call data, CivicMirror uses [unitedstates/congress](https://github.com/unitedstates/congress) scraped to JSON, then batch-loaded into Supabase.
+
+- **Design:** [docs/design/congress-vote-ingestion.md](docs/design/congress-vote-ingestion.md)
+- **Ingest scripts:** [scripts/ingest-congress/](scripts/ingest-congress/)
+
 ## Next steps
 
 - [x] District discussion board UI + Supabase Realtime
+- [x] Run congress ingest backfill + switch API routes to DB reads
 - [ ] Bill → issue tag cache + LLM batch labeling
-- [ ] Senate votes via LegiScan or CIV.IQ
 - [ ] YouTube curated feed per representative
 
 ## License

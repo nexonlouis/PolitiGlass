@@ -8,7 +8,12 @@ export async function GET() {
     congressGov: {
       configured: Boolean(process.env.CONGRESS_GOV_API_KEY),
       reachable: congressGov,
-      usedFor: ["federal_official_lookup", "house_roll_call_votes"],
+      usedFor: ["federal_official_lookup"],
+    },
+    legislationDatabase: {
+      configured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      usedFor: ["voting_records", "reflection_score"],
+      note: "Reads roll_call_* tables ingested via scripts/ingest-congress",
     },
     geocodio: {
       configured: Boolean(process.env.GEOCODIO_API_KEY),

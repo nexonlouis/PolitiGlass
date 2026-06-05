@@ -150,15 +150,15 @@ export function DashboardView() {
               </p>
               {houseRep && (
                 <p className="mt-2 text-xs text-slate-500">
-                  House votes for {houseRep.fullName}. Senate scoring requires LegiScan
-                  or CIV.IQ integration.
+                  Scored from ingested roll-call data for {houseRep.fullName} (House and
+                  Senate when available).
                 </p>
               )}
             </>
           ) : (
             <p className="text-sm text-slate-600">
-              Add a Congress.gov API key for live House roll-call alignment, or continue
-              in demo mode to explore the UI.
+              Complete onboarding and run congress vote ingest, or check that this
+              official has roll-call records in the database.
             </p>
           )}
         </Card>

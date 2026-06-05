@@ -1,25 +1,38 @@
 import { NextResponse } from "next/server";
-import { fetchHouseVotesForMember } from "@/lib/external/congress";
-import { reflectionQuerySchema } from "@/lib/validation/api";
+import { fetchMemberVotesFromDb } from "@/lib/legislation/member-votes-db";
+import { votingRecordsQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const parsed = reflectionQuerySchema.safeParse({
+  const parsed = votingRecordsQuerySchema.safeParse({
     bioguideId: searchParams.get("bioguideId"),
+    limit: searchParams.get("limit") ?? undefined,
+    tags: searchParams.get("tags") ?? undefined,
+    includeProcedural: searchParams.get("includeProcedural") ?? undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "bioguideId is required" }, { status: 400 });
   }
 
-  const votes = await fetchHouseVotesForMember(parsed.data.bioguideId);
+  const userTags = parsed.data.tags
+    ? parsed.data.tags.split(",").filter(Boolean)
+    : [];
+
+  const votes = await fetchMemberVotesFromDb(parsed.data.bioguideId, {
+    limit: parsed.data.limit ?? 25,
+    userTags,
+    includeProcedural: parsed.data.includeProcedural,
+  });
 
   return NextResponse.json({
     bioguideId: parsed.data.bioguideId,
     votes,
+    source: "database",
+    scoringFilter: parsed.data.includeProcedural ? "all" : "policy-relevant",
     note:
       votes.length === 0
-        ? "House roll calls require CONGRESS_GOV_API_KEY. Senate votes need LegiScan or CIV.IQ."
+        ? "No ingested votes for this member. Run scripts/ingest-congress or check bioguide ID."
         : undefined,
   });
 }

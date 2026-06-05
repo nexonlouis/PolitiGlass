@@ -19,3 +19,12 @@ export const issueTagsSchema = z.object({
 export const reflectionQuerySchema = z.object({
   bioguideId: z.string().min(1),
 });
+
+export const votingRecordsQuerySchema = reflectionQuerySchema.extend({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  tags: z.string().optional(),
+  includeProcedural: z
+    .enum(["true", "false", "1", "0"])
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
+});

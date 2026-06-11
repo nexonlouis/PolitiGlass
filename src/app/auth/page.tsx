@@ -21,12 +21,9 @@ function AuthForm() {
 
   const completePendingOnboarding = async () => {
     const draft = loadOnboardingDraft();
-    if (!draft.lookup || draft.tags.length < 3) return;
+    if (!draft.lookup || draft.tagPreferences.length < 3) return;
 
-    const tagWeights: Record<string, number> = {};
-    draft.tags.forEach((t) => {
-      tagWeights[t] = 3;
-    });
+    const tags = draft.tagPreferences.map((p) => p.slug);
 
     await fetch("/api/onboarding/complete", {
       method: "POST",
@@ -38,8 +35,8 @@ function AuthForm() {
         lookupZip: draft.lookup.lookupZip,
         representatives: draft.lookup.representatives,
         demographics: draft.demographics,
-        tags: draft.tags,
-        weights: tagWeights,
+        tags,
+        tagPreferences: draft.tagPreferences,
       }),
     });
   };

@@ -6,17 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { RepresentativeCard } from "@/components/representatives/RepresentativeCard";
+import { IssueTagPicker } from "@/components/onboarding/IssueTagPicker";
 import {
   EDUCATION_LEVELS,
   INCOME_BRACKETS,
-  ISSUE_TAGS,
+  type IssueTagDefinition,
 } from "@/lib/constants/issue-tags";
+import { sortTagsForDisplay, getTopSuggestedSlugs } from "@/lib/constants/issue-tag-graph";
+import { rankTagsByDemographics } from "@/lib/demographics/suggest-tags";
 import {
   clearOnboardingDraft,
   loadOnboardingDraft,
   saveOnboardingDraft,
 } from "@/lib/onboarding/storage";
 import type { DistrictLookupResult, DemographicsInput } from "@/lib/types";
+import type { IssueTagPreference } from "@/lib/types/issue-tags";
 import { createClient } from "@/lib/supabase/client";
 
 const STEPS = ["location", "demographics", "tags", "reveal"] as const;
@@ -29,8 +33,10 @@ export function OnboardingWizard() {
   const [lookup, setLookup] = useState<DistrictLookupResult | null>(null);
   const [lookupSource, setLookupSource] = useState<string | null>(null);
   const [demographics, setDemographics] = useState<DemographicsInput>({});
+  const [displayTags, setDisplayTags] = useState<IssueTagDefinition[]>([]);
   const [suggestedSlugs, setSuggestedSlugs] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagPreferences, setTagPreferences] = useState<IssueTagPreference[]>([]);
+  const [anchorSlug, setAnchorSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,10 +44,17 @@ export function OnboardingWizard() {
     const draft = loadOnboardingDraft();
     if (draft.lookup) setLookup(draft.lookup);
     if (draft.demographics) setDemographics(draft.demographics);
-    if (draft.tags.length) setSelectedTags(draft.tags);
+    if (draft.tagPreferences.length) {
+      setTagPreferences(draft.tagPreferences);
+    }
   }, []);
 
   const stepIndex = STEPS.indexOf(step);
+
+  const persistPreferences = useCallback((next: IssueTagPreference[]) => {
+    setTagPreferences(next);
+    saveOnboardingDraft({ tagPreferences: next });
+  }, []);
 
   const runLookup = useCallback(async () => {
     setLoading(true);
@@ -86,11 +99,18 @@ export function OnboardingWizard() {
       const data = await res.json();
       if (!res.ok) throw new Error("Could not load suggestions");
 
-      const slugs = (data.suggested as { slug: string }[]).map((s) => s.slug);
-      setSuggestedSlugs(slugs);
-      const preselect = slugs.slice(0, 5);
-      setSelectedTags(preselect);
-      saveOnboardingDraft({ demographics, tags: preselect });
+      const scores = rankTagsByDemographics(demographics);
+      const sorted = sortTagsForDisplay(scores);
+      setDisplayTags(sorted);
+      setSuggestedSlugs(getTopSuggestedSlugs(scores));
+
+      const preselect: IssueTagPreference[] = (data.suggested as { slug: string }[])
+        .slice(0, 5)
+        .map((s) => ({ slug: s.slug, weight: 3, stance: "support" as const }));
+
+      setTagPreferences(preselect);
+      setAnchorSlug(preselect[0]?.slug ?? null);
+      saveOnboardingDraft({ demographics, tagPreferences: preselect });
       setStep("tags");
     } catch {
       setError("Could not load issue suggestions");
@@ -99,25 +119,13 @@ export function OnboardingWizard() {
     }
   }, [demographics]);
 
-  const toggleTag = (slug: string) => {
-    setSelectedTags((prev) => {
-      const next = prev.includes(slug)
-        ? prev.filter((s) => s !== slug)
-        : prev.length < 8
-          ? [...prev, slug]
-          : prev;
-      saveOnboardingDraft({ tags: next });
-      return next;
-    });
-  };
-
   const finishOnboarding = async () => {
-    if (!lookup || selectedTags.length < 3) {
+    if (!lookup || tagPreferences.length < 3) {
       setError("Select at least 3 issue priorities.");
       return;
     }
 
-    saveOnboardingDraft({ tags: selectedTags, demographics });
+    saveOnboardingDraft({ tagPreferences, demographics });
     setStep("reveal");
     setLoading(true);
     setError(null);
@@ -127,12 +135,9 @@ export function OnboardingWizard() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user) {
-      const tagWeights: Record<string, number> = {};
-      selectedTags.forEach((t) => {
-        tagWeights[t] = 3;
-      });
+    const tags = tagPreferences.map((p) => p.slug);
 
+    if (user) {
       const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,8 +148,8 @@ export function OnboardingWizard() {
           lookupZip: lookup.lookupZip,
           representatives: lookup.representatives,
           demographics,
-          tags: selectedTags,
-          weights: tagWeights,
+          tags,
+          tagPreferences,
         }),
       });
 
@@ -222,6 +227,7 @@ export function OnboardingWizard() {
                 type="number"
                 className="mt-1"
                 placeholder="1990"
+                value={demographics.birthYear ?? ""}
                 onChange={(e) =>
                   setDemographics((d) => ({
                     ...d,
@@ -234,6 +240,7 @@ export function OnboardingWizard() {
               Education
               <select
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+                value={demographics.educationLevel ?? ""}
                 onChange={(e) =>
                   setDemographics((d) => ({ ...d, educationLevel: e.target.value }))
                 }
@@ -250,6 +257,7 @@ export function OnboardingWizard() {
               Income bracket
               <select
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+                value={demographics.incomeBracket ?? ""}
                 onChange={(e) =>
                   setDemographics((d) => ({ ...d, incomeBracket: e.target.value }))
                 }
@@ -265,6 +273,7 @@ export function OnboardingWizard() {
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
+                checked={demographics.hasChildren === true}
                 onChange={(e) =>
                   setDemographics((d) => ({ ...d, hasChildren: e.target.checked }))
                 }
@@ -286,32 +295,20 @@ export function OnboardingWizard() {
       {step === "tags" && (
         <Card>
           <h2 className="text-xl font-semibold">Your first reflection</h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Choose 3–8 issues. {suggestedSlugs.length > 0 && "Suggested tags are highlighted."}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {ISSUE_TAGS.map((tag) => {
-              const selected = selectedTags.includes(tag.slug);
-              const suggested = suggestedSlugs.includes(tag.slug);
-              return (
-                <button
-                  key={tag.slug}
-                  type="button"
-                  onClick={() => toggleTag(tag.slug)}
-                  className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
-                    selected
-                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                      : suggested
-                        ? "border-2 border-slate-900 bg-slate-50 dark:border-slate-100"
-                        : "border border-slate-300 bg-white dark:border-slate-600"
-                  }`}
-                >
-                  {tag.label}
-                </button>
-              );
-            })}
+          <div className="mt-4">
+            <IssueTagPicker
+              displayTags={
+                displayTags.length > 0
+                  ? displayTags
+                  : sortTagsForDisplay(rankTagsByDemographics(demographics))
+              }
+              suggestedSlugs={suggestedSlugs}
+              preferences={tagPreferences}
+              anchorSlug={anchorSlug}
+              onPreferencesChange={persistPreferences}
+              onAnchorChange={setAnchorSlug}
+            />
           </div>
-          <p className="mt-2 text-xs text-slate-500">{selectedTags.length} selected</p>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <div className="mt-4 flex gap-2">
             <Button variant="secondary" onClick={() => setStep("demographics")}>
@@ -319,7 +316,7 @@ export function OnboardingWizard() {
             </Button>
             <Button
               onClick={finishOnboarding}
-              disabled={loading || selectedTags.length < 3}
+              disabled={loading || tagPreferences.length < 3}
             >
               {loading ? "Saving…" : "See my dashboard"}
             </Button>

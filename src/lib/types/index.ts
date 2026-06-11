@@ -1,3 +1,7 @@
+import type { IssueStance } from "@/lib/types/issue-tags";
+
+export type { IssueStance, IssueTagPreference } from "@/lib/types/issue-tags";
+
 export type Chamber = "house" | "senate" | "state";
 
 export interface Representative {
@@ -35,13 +39,20 @@ export interface ReflectionScoreResult {
   message: string;
   aligned: VoteAlignmentItem[];
   diverged: VoteAlignmentItem[];
+  /** All votes used in the score (when requested). */
+  scoredVotes?: VoteAlignmentItem[];
 }
 
 export interface VoteAlignmentItem {
+  voteId: string;
   billId: string;
   title: string;
+  summary: string | null;
+  question: string | null;
+  votedAt: string;
   vote: "Yea" | "Nay" | "Not Voting" | "Present";
   issueSlug: string;
+  userStance: IssueStance;
   aligned: boolean;
 }
 
@@ -49,4 +60,5 @@ export interface UserIssueTag {
   slug: string;
   label: string;
   weight: number;
+  stance: IssueStance;
 }

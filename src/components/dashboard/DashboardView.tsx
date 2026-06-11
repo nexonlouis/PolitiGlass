@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { RepresentativeCard } from "@/components/representatives/RepresentativeCard";
+import { ReflectionEvidence } from "@/components/dashboard/ReflectionEvidence";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getIssueTagLabel } from "@/lib/constants/issue-tags";
+import { parseIssueTagWeights } from "@/lib/legislation/issue-tag-preferences";
 import { loadOnboardingDraft } from "@/lib/onboarding/storage";
 import type { ReflectionScoreResult, Representative } from "@/lib/types";
+import type { IssueTagPreference } from "@/lib/types/issue-tags";
 import { createClient } from "@/lib/supabase/client";
 import { DistrictForum } from "@/components/forum/DistrictForum";
 import Link from "next/link";
@@ -13,7 +17,7 @@ import Link from "next/link";
 export function DashboardView() {
   const [reps, setReps] = useState<Representative[]>([]);
   const [district, setDistrict] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
+  const [preferences, setPreferences] = useState<IssueTagPreference[]>([]);
   const [reflection, setReflection] = useState<ReflectionScoreResult | null>(null);
   const [signedIn, setSignedIn] = useState(false);
 
@@ -22,7 +26,7 @@ export function DashboardView() {
       const draft = loadOnboardingDraft();
       let loadedReps: Representative[] = draft.lookup?.representatives ?? [];
       let loadedDistrict = draft.lookup?.congressionalDistrict ?? null;
-      let loadedTags = draft.tags;
+      let loadedPreferences = draft.tagPreferences;
 
       try {
         const supabase = createClient();
@@ -40,7 +44,7 @@ export function DashboardView() {
 
           const { data: demo } = await supabase
             .from("user_demographics")
-            .select("saved_issue_tags")
+            .select("saved_issue_tags, issue_tag_weights")
             .eq("user_id", user.id)
             .single();
 
@@ -53,7 +57,10 @@ export function DashboardView() {
             loadedDistrict = profile.congressional_district;
           }
           if (demo?.saved_issue_tags?.length) {
-            loadedTags = demo.saved_issue_tags;
+            loadedPreferences = parseIssueTagWeights(
+              demo.saved_issue_tags,
+              demo.issue_tag_weights,
+            );
           }
           if (savedReps?.length) {
             loadedReps = savedReps.map((r) => ({
@@ -73,7 +80,7 @@ export function DashboardView() {
 
       setReps(loadedReps);
       setDistrict(loadedDistrict);
-      setTags(loadedTags);
+      setPreferences(loadedPreferences);
     }
 
     void load();
@@ -81,18 +88,24 @@ export function DashboardView() {
 
   useEffect(() => {
     const houseRep = reps.find((r) => r.chamber === "house");
-    if (!houseRep || tags.length === 0) return;
+    if (!houseRep || preferences.length === 0) return;
 
     const params = new URLSearchParams({
       bioguideId: houseRep.bioguideId,
-      tags: tags.join(","),
+      tags: preferences.map((p) => p.slug).join(","),
+      includeVotes: "1",
     });
+
+    for (const pref of preferences) {
+      params.set(`weight_${pref.slug}`, String(pref.weight));
+      params.set(`stance_${pref.slug}`, pref.stance);
+    }
 
     fetch(`/api/reflection-score?${params}`)
       .then((r) => r.json())
       .then((data) => setReflection(data as ReflectionScoreResult))
       .catch(() => undefined);
-  }, [reps, tags]);
+  }, [reps, preferences]);
 
   const houseRep = reps.find((r) => r.chamber === "house");
 
@@ -154,6 +167,9 @@ export function DashboardView() {
                   Senate when available).
                 </p>
               )}
+              {reflection.scoredVotes && reflection.scoredVotes.length > 0 && (
+                <ReflectionEvidence votes={reflection.scoredVotes} />
+              )}
             </>
           ) : (
             <p className="text-sm text-slate-600">
@@ -166,16 +182,20 @@ export function DashboardView() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Priority issues</h2>
-        {tags.length === 0 ? (
+        {preferences.length === 0 ? (
           <p className="text-sm text-slate-600">No issues selected yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {tags.map((slug) => (
+            {preferences.map((pref) => (
               <span
-                key={slug}
-                className="rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800"
+                key={pref.slug}
+                className={`rounded-full px-3 py-1 text-sm ${
+                  pref.stance === "support"
+                    ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-200"
+                    : "bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
+                }`}
               >
-                {slug.replace(/-/g, " ")}
+                {getIssueTagLabel(pref.slug)} · {pref.stance}
               </span>
             ))}
           </div>
@@ -192,7 +212,7 @@ export function DashboardView() {
         <DistrictForum
           compact
           initialDistrict={district}
-          initialIssueTags={tags}
+          initialIssueTags={preferences.map((p) => p.slug)}
         />
       </section>
     </div>

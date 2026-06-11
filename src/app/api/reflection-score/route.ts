@@ -1,36 +1,39 @@
 import { NextResponse } from "next/server";
 import { fetchMemberVotesFromDb } from "@/lib/legislation/member-votes-db";
+import { parsePreferencesFromQuery } from "@/lib/legislation/issue-tag-preferences";
 import { computeReflectionScore } from "@/lib/legislation/reflection-score";
 import { reflectionQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const bioguideParsed = reflectionQuerySchema.safeParse({
+  const parsed = reflectionQuerySchema.safeParse({
     bioguideId: searchParams.get("bioguideId"),
+    includeVotes: searchParams.get("includeVotes") ?? undefined,
   });
 
-  if (!bioguideParsed.success) {
+  if (!parsed.success) {
     return NextResponse.json({ error: "bioguideId is required" }, { status: 400 });
   }
 
   const tagsParam = searchParams.get("tags");
   const tags = tagsParam ? tagsParam.split(",").filter(Boolean) : ["healthcare"];
+  const preferences = parsePreferencesFromQuery(tags, searchParams);
 
-  const tagWeights: Record<string, number> = {};
-  for (const tag of tags) {
-    tagWeights[tag] = Number(searchParams.get(`weight_${tag}`)) || 3;
-  }
+  const tagWeights = Object.fromEntries(preferences.map((p) => [p.slug, p.weight]));
 
-  const votes = await fetchMemberVotesFromDb(bioguideParsed.data.bioguideId, {
-    limit: 40,
-    userTags: tags,
+  const votes = await fetchMemberVotesFromDb(parsed.data.bioguideId, {
+    limit: 60,
+    preferences,
+    scoringOnly: true,
   });
 
-  const result = computeReflectionScore(votes, tagWeights);
+  const result = computeReflectionScore(votes, tagWeights, {
+    includeAllVotes: parsed.data.includeVotes ?? true,
+  });
 
   return NextResponse.json({
     ...result,
     source: "database",
-    bioguideId: bioguideParsed.data.bioguideId,
+    bioguideId: parsed.data.bioguideId,
   });
 }

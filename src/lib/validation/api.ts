@@ -11,13 +11,26 @@ export const demographicsSchema = z.object({
   hasChildren: z.boolean().optional().nullable(),
 });
 
+export const issueStanceSchema = z.enum(["support", "oppose"]);
+
+export const issueTagPreferenceSchema = z.object({
+  slug: z.string().min(1),
+  weight: z.number().min(1).max(5).default(3),
+  stance: issueStanceSchema.default("support"),
+});
+
 export const issueTagsSchema = z.object({
   tags: z.array(z.string().min(1)).min(3).max(8),
   weights: z.record(z.string(), z.number().min(1).max(5)).optional(),
+  tagPreferences: z.array(issueTagPreferenceSchema).min(3).max(8).optional(),
 });
 
 export const reflectionQuerySchema = z.object({
   bioguideId: z.string().min(1),
+  includeVotes: z
+    .enum(["true", "false", "1", "0"])
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
 });
 
 export const votingRecordsQuerySchema = reflectionQuerySchema.extend({

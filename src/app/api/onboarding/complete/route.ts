@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { preferencesToWeightsJson } from "@/lib/legislation/issue-tag-preferences";
 import { demographicsSchema, issueTagsSchema } from "@/lib/validation/api";
 import { z } from "zod";
 
@@ -22,6 +23,7 @@ const completeSchema = z.object({
   demographics: demographicsSchema,
   tags: issueTagsSchema.shape.tags,
   weights: issueTagsSchema.shape.weights.optional(),
+  tagPreferences: issueTagsSchema.shape.tagPreferences.optional(),
 });
 
 export async function POST(request: Request) {
@@ -65,10 +67,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
-  const weights = parsed.data.weights ?? {};
-  for (const tag of parsed.data.tags) {
-    if (!weights[tag]) weights[tag] = 3;
-  }
+  const preferences =
+    parsed.data.tagPreferences ??
+    parsed.data.tags.map((slug) => ({
+      slug,
+      weight: parsed.data.weights?.[slug] ?? 3,
+      stance: "support" as const,
+    }));
+
+  const issueTagWeights = preferencesToWeightsJson(preferences);
+  const tags = preferences.map((p) => p.slug);
 
   const { error: demoError } = await supabase.from("user_demographics").upsert({
     user_id: user.id,
@@ -76,8 +84,8 @@ export async function POST(request: Request) {
     education_level: parsed.data.demographics.educationLevel ?? null,
     income_bracket: parsed.data.demographics.incomeBracket ?? null,
     has_children: parsed.data.demographics.hasChildren ?? null,
-    saved_issue_tags: parsed.data.tags,
-    issue_tag_weights: weights,
+    saved_issue_tags: tags,
+    issue_tag_weights: issueTagWeights,
     updated_at: new Date().toISOString(),
   });
 

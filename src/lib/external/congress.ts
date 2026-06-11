@@ -58,9 +58,14 @@ export async function fetchHouseVotesForMember(
       if (!normalized) continue;
 
       records.push({
+        voteId: `house-${congress}-${session}-${rollCall}`,
         billId: vote.legislationNumber ?? `vote-${rollCall}`,
         title: vote.legislationTitle ?? `Roll call ${rollCall}`,
+        summary: null,
+        question: null,
+        votedAt: new Date().toISOString(),
         issueSlug: "healthcare",
+        userStance: "support",
         vote: normalized,
         userSupportsBill: true,
       });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parsePreferencesFromQuery } from "@/lib/legislation/issue-tag-preferences";
 import { fetchMemberVotesFromDb } from "@/lib/legislation/member-votes-db";
 import { votingRecordsQuerySchema } from "@/lib/validation/api";
 
@@ -15,13 +16,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "bioguideId is required" }, { status: 400 });
   }
 
-  const userTags = parsed.data.tags
+  const tagList = parsed.data.tags
     ? parsed.data.tags.split(",").filter(Boolean)
     : [];
+  const preferences = parsePreferencesFromQuery(tagList, searchParams);
 
   const votes = await fetchMemberVotesFromDb(parsed.data.bioguideId, {
     limit: parsed.data.limit ?? 25,
-    userTags,
+    preferences,
     includeProcedural: parsed.data.includeProcedural,
   });
 

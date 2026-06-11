@@ -1,3 +1,4 @@
+import { expandBillTagsForMatching } from "@/lib/legislation/bill-tag-aliases";
 import type { IssueStance, IssueTagPreference } from "@/lib/types/issue-tags";
 
 export interface IssueMatch {
@@ -14,9 +15,10 @@ export function pickIssueMatch(
   billIssueSlugs: string[] | null | undefined,
   preferences: IssueTagPreference[],
 ): IssueMatch | null {
-  const billTags = billIssueSlugs ?? [];
-  if (billTags.length === 0 || preferences.length === 0) return null;
+  const rawTags = billIssueSlugs ?? [];
+  if (rawTags.length === 0 || preferences.length === 0) return null;
 
+  const billTags = expandBillTagsForMatching(rawTags);
   const prefBySlug = new Map(preferences.map((p) => [p.slug, p]));
   let best: IssueMatch | null = null;
 

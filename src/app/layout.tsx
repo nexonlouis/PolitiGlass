@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { SiteNav } from "@/components/layout/SiteNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,20 +36,7 @@ export default function RootLayout({
             <Link href="/" className="font-semibold tracking-tight">
               CivicMirror
             </Link>
-            <div className="flex gap-4 text-sm">
-              <Link href="/onboarding" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
-                Onboarding
-              </Link>
-              <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
-                Dashboard
-              </Link>
-              <Link href="/forum" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
-                Forum
-              </Link>
-              <Link href="/auth" className="text-slate-600 hover:text-slate-900 dark:text-slate-400">
-                Sign in
-              </Link>
-            </div>
+            <SiteNav />
           </nav>
         </header>
         {children}

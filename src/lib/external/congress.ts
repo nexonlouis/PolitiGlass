@@ -62,6 +62,7 @@ export async function fetchHouseVotesForMember(
         billId: vote.legislationNumber ?? `vote-${rollCall}`,
         title: vote.legislationTitle ?? `Roll call ${rollCall}`,
         summary: null,
+        voteContext: null,
         question: null,
         votedAt: new Date().toISOString(),
         issueSlug: "healthcare",

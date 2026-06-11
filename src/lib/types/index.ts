@@ -48,6 +48,8 @@ export interface VoteAlignmentItem {
   billId: string;
   title: string;
   summary: string | null;
+  /** Roll-call context when no CRS summary is available. */
+  voteContext: string | null;
   question: string | null;
   votedAt: string;
   vote: "Yea" | "Nay" | "Not Voting" | "Present";

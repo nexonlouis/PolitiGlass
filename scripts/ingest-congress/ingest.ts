@@ -9,6 +9,7 @@
 import "dotenv/config";
 import path from "node:path";
 import { createAdminClient } from "./lib/supabase-admin.js";
+import { loadLegislatorIdMaps } from "../../src/lib/legislators/id-map.js";
 import {
   flattenVotePositions,
   normalizeBillRow,
@@ -128,6 +129,7 @@ async function ingestVotes(
   dataDir: string,
   congress: number,
   dryRun: boolean,
+  lisToBioguide: Map<string, string>,
   sessions?: string[],
   limit?: number,
 ) {
@@ -146,7 +148,11 @@ async function ingestVotes(
       }
 
       const voteRow = normalizeVoteRow(raw);
-      const positions = flattenVotePositions(raw.votes);
+      const positions = flattenVotePositions(
+        raw.votes,
+        voteRow.chamber,
+        lisToBioguide,
+      );
 
       if (dryRun) {
         if (processed <= 3) {
@@ -169,7 +175,10 @@ async function ingestVotes(
           number: raw.bill.number,
           congress: raw.bill.congress,
         });
-        await supabase!.from("bills").upsert(billStub, { onConflict: "bill_id" });
+        await supabase!.from("bills").upsert(billStub, {
+          onConflict: "bill_id",
+          ignoreDuplicates: true,
+        });
       }
 
       const { error: voteError } = await supabase!
@@ -277,11 +286,14 @@ async function main() {
 
     if (!opts.billsOnly) {
       console.log("\n→ Ingesting votes…");
+      const { lisToBioguide } = await loadLegislatorIdMaps();
+      console.log(`  legislator LIS map: ${lisToBioguide.size} senators`);
       votes = await ingestVotes(
         supabase,
         resolvedData,
         opts.congress,
         opts.dryRun,
+        lisToBioguide,
         opts.sessions,
         opts.limit,
       );

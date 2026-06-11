@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { RepresentativeCard } from "@/components/representatives/RepresentativeCard";
-import { ReflectionEvidence } from "@/components/dashboard/ReflectionEvidence";
+import { OfficialReflectionTabs } from "@/components/dashboard/OfficialReflectionTabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getIssueTagLabel } from "@/lib/constants/issue-tags";
 import { parseIssueTagWeights } from "@/lib/legislation/issue-tag-preferences";
 import { loadOnboardingDraft } from "@/lib/onboarding/storage";
-import type { ReflectionScoreResult, Representative } from "@/lib/types";
+import type { Representative } from "@/lib/types";
 import type { IssueTagPreference } from "@/lib/types/issue-tags";
 import { createClient } from "@/lib/supabase/client";
 import { DistrictForum } from "@/components/forum/DistrictForum";
@@ -18,7 +18,6 @@ export function DashboardView() {
   const [reps, setReps] = useState<Representative[]>([]);
   const [district, setDistrict] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<IssueTagPreference[]>([]);
-  const [reflection, setReflection] = useState<ReflectionScoreResult | null>(null);
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
@@ -86,29 +85,6 @@ export function DashboardView() {
     void load();
   }, []);
 
-  useEffect(() => {
-    const houseRep = reps.find((r) => r.chamber === "house");
-    if (!houseRep || preferences.length === 0) return;
-
-    const params = new URLSearchParams({
-      bioguideId: houseRep.bioguideId,
-      tags: preferences.map((p) => p.slug).join(","),
-      includeVotes: "1",
-    });
-
-    for (const pref of preferences) {
-      params.set(`weight_${pref.slug}`, String(pref.weight));
-      params.set(`stance_${pref.slug}`, pref.stance);
-    }
-
-    fetch(`/api/reflection-score?${params}`)
-      .then((r) => r.json())
-      .then((data) => setReflection(data as ReflectionScoreResult))
-      .catch(() => undefined);
-  }, [reps, preferences]);
-
-  const houseRep = reps.find((r) => r.chamber === "house");
-
   return (
     <div className="space-y-8">
       <header>
@@ -152,35 +128,6 @@ export function DashboardView() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Reflection score</h2>
-        <Card>
-          {reflection && reflection.votesAnalyzed > 0 ? (
-            <>
-              <p className="text-4xl font-bold">{reflection.score}</p>
-              <p className="mt-1 text-sm text-slate-600">{reflection.message}</p>
-              <p className="mt-1 text-xs uppercase text-slate-500">
-                Confidence: {reflection.confidence}
-              </p>
-              {houseRep && (
-                <p className="mt-2 text-xs text-slate-500">
-                  Scored from ingested roll-call data for {houseRep.fullName} (House and
-                  Senate when available).
-                </p>
-              )}
-              {reflection.scoredVotes && reflection.scoredVotes.length > 0 && (
-                <ReflectionEvidence votes={reflection.scoredVotes} />
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-slate-600">
-              Complete onboarding and run congress vote ingest, or check that this
-              official has roll-call records in the database.
-            </p>
-          )}
-        </Card>
-      </section>
-
-      <section>
         <h2 className="mb-3 text-lg font-semibold">Priority issues</h2>
         {preferences.length === 0 ? (
           <p className="text-sm text-slate-600">No issues selected yet.</p>
@@ -200,6 +147,11 @@ export function DashboardView() {
             ))}
           </div>
         )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold">Reflection score</h2>
+        <OfficialReflectionTabs reps={reps} preferences={preferences} />
       </section>
 
       <section>

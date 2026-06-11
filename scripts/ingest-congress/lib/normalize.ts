@@ -29,6 +29,8 @@ export function normalizePosition(raw: string): string | null {
 
 export function flattenVotePositions(
   votes: UscVoteFile["votes"],
+  chamber: "house" | "senate",
+  lisToBioguide: ReadonlyMap<string, string>,
 ): Array<{ bioguideId: string; position: string; party: string | null; state: string | null }> {
   const out: Array<{
     bioguideId: string;
@@ -45,8 +47,11 @@ export function flattenVotePositions(
 
     for (const m of members as UscVoteMember[]) {
       if (!m.id) continue;
+      const raw = m.id.toUpperCase();
+      const bioguideId =
+        chamber === "senate" ? (lisToBioguide.get(raw) ?? raw) : raw;
       out.push({
-        bioguideId: m.id.toUpperCase(),
+        bioguideId,
         position,
         party: m.party ?? null,
         state: m.state ?? null,

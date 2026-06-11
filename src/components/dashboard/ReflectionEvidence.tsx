@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getIssueTagLabel } from "@/lib/constants/issue-tags";
+import { congressGovBillTextUrl } from "@/lib/legislation/bill-congress-url";
 import type { VoteAlignmentItem } from "@/lib/types";
 
 type Filter = "all" | "aligned" | "diverged";
@@ -14,6 +15,7 @@ function VoteEvidenceCard({ item }: { item: VoteAlignmentItem }) {
   const [expanded, setExpanded] = useState(false);
   const summary = item.summary?.trim();
   const showToggle = summary && summary.length > 220;
+  const billTextUrl = congressGovBillTextUrl(item.billId);
 
   return (
     <li className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
@@ -62,9 +64,22 @@ function VoteEvidenceCard({ item }: { item: VoteAlignmentItem }) {
             </button>
           )}
         </div>
-      ) : item.question ? (
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{item.question}</p>
+      ) : item.voteContext ? (
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{item.voteContext}</p>
       ) : null}
+
+      {billTextUrl && (
+        <p className="mt-3">
+          <a
+            href={billTextUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-slate-600 underline hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            View full bill text on Congress.gov
+          </a>
+        </p>
+      )}
     </li>
   );
 }

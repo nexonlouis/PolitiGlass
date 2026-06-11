@@ -405,7 +405,7 @@ function FilterChip({
       className={`rounded-full px-3 py-1 text-sm capitalize transition-colors ${
         active
           ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-          : "border border-slate-300 bg-white dark:border-slate-600"
+          : "border border-slate-300 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
       }`}
     >
       {label}

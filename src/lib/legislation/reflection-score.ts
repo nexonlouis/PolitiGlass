@@ -6,6 +6,7 @@ export interface MemberVoteRecord {
   billId: string;
   title: string;
   summary: string | null;
+  voteContext: string | null;
   question: string | null;
   votedAt: string;
   issueSlug: string;
@@ -63,6 +64,7 @@ export function computeReflectionScore(
       billId: v.billId,
       title: v.title,
       summary: v.summary,
+      voteContext: v.voteContext,
       question: v.question,
       votedAt: v.votedAt,
       vote: v.vote,

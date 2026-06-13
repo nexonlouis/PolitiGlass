@@ -43,6 +43,8 @@ export interface ReflectionScoreResult {
   scoredVotes?: VoteAlignmentItem[];
 }
 
+export type AlignmentSource = "auto" | "manual";
+
 export interface VoteAlignmentItem {
   voteId: string;
   billId: string;
@@ -55,7 +57,11 @@ export interface VoteAlignmentItem {
   vote: "Yea" | "Nay" | "Not Voting" | "Present";
   issueSlug: string;
   userStance: IssueStance;
+  /** Effective alignment used in the score (may be manually overridden). */
   aligned: boolean;
+  /** Alignment from issue tags + roll-call vote only. */
+  autoAligned: boolean;
+  alignmentSource: AlignmentSource;
 }
 
 export interface UserIssueTag {

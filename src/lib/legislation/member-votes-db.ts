@@ -1,5 +1,6 @@
 import type { MemberVoteRecord } from "@/lib/legislation/reflection-score";
 import { buildVoteDisplayFields } from "@/lib/legislation/bill-display";
+import { dedupeVotesByBill } from "@/lib/legislation/dedupe-votes-by-bill";
 import { memberVoteLookupIds } from "@/lib/legislators/id-map";
 import { fetchCongressBillMetadataBatch } from "@/lib/external/congress-bills";
 import { pickIssueMatch } from "@/lib/legislation/pick-issue-match";
@@ -219,7 +220,10 @@ export async function fetchMemberVotesFromDb(
       scoringOnly,
     );
     if (mapped) records.push(mapped);
-    if (scoringOnly && records.length >= limit) break;
+  }
+
+  if (scoringOnly) {
+    return dedupeVotesByBill(records).slice(0, limit);
   }
 
   return records;

@@ -151,7 +151,11 @@ export function DashboardView() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Reflection score</h2>
-        <OfficialReflectionTabs reps={reps} preferences={preferences} />
+        <OfficialReflectionTabs
+          reps={reps}
+          preferences={preferences}
+          signedIn={signedIn}
+        />
       </section>
 
       <section>

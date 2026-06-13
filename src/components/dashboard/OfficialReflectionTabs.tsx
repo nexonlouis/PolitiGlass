@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ReflectionEvidence } from "@/components/dashboard/ReflectionEvidence";
 import { Card } from "@/components/ui/card";
 import type { ReflectionScoreResult, Representative } from "@/lib/types";
@@ -54,11 +54,13 @@ function chamberLabel(rep: Representative): string {
 interface OfficialReflectionTabsProps {
   reps: Representative[];
   preferences: IssueTagPreference[];
+  signedIn: boolean;
 }
 
 export function OfficialReflectionTabs({
   reps,
   preferences,
+  signedIn,
 }: OfficialReflectionTabsProps) {
   const federalReps = useMemo(() => sortFederalReps(reps), [reps]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -67,44 +69,41 @@ export function OfficialReflectionTabs({
   >({});
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const loadReflections = useCallback(async () => {
     if (federalReps.length === 0 || preferences.length === 0) {
       setReflections({});
       setActiveId(null);
       return;
     }
 
-    let cancelled = false;
     setLoading(true);
 
-    Promise.all(
-      federalReps.map(async (rep) => {
-        const params = buildReflectionParams(rep.bioguideId, preferences);
-        const response = await fetch(`/api/reflection-score?${params}`);
-        const data = (await response.json()) as ReflectionScoreResult;
-        return [rep.bioguideId, data] as const;
-      }),
-    )
-      .then((entries) => {
-        if (cancelled) return;
-        const next = Object.fromEntries(entries);
-        setReflections(next);
-        setActiveId((prev) => {
-          if (prev && next[prev]) return prev;
-          return federalReps[0]?.bioguideId ?? null;
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setReflections({});
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    try {
+      const entries = await Promise.all(
+        federalReps.map(async (rep) => {
+          const params = buildReflectionParams(rep.bioguideId, preferences);
+          const response = await fetch(`/api/reflection-score?${params}`);
+          const data = (await response.json()) as ReflectionScoreResult;
+          return [rep.bioguideId, data] as const;
+        }),
+      );
 
-    return () => {
-      cancelled = true;
-    };
+      const next = Object.fromEntries(entries);
+      setReflections(next);
+      setActiveId((prev) => {
+        if (prev && next[prev]) return prev;
+        return federalReps[0]?.bioguideId ?? null;
+      });
+    } catch {
+      setReflections({});
+    } finally {
+      setLoading(false);
+    }
   }, [federalReps, preferences]);
+
+  useEffect(() => {
+    void loadReflections();
+  }, [loadReflections]);
 
   const activeRep = federalReps.find((r) => r.bioguideId === activeId) ?? null;
   const reflection = activeId ? reflections[activeId] : undefined;
@@ -182,9 +181,17 @@ export function OfficialReflectionTabs({
             </p>
             <p className="mt-2 text-xs text-slate-500">
               Scored from ingested roll-call votes for {activeRep.fullName}.
+              {signedIn
+                ? " Tap You support/oppose on a bill below to adjust your view after reading."
+                : " Sign in to adjust your support or oppose on individual bills."}
             </p>
-            {reflection.scoredVotes && reflection.scoredVotes.length > 0 && (
-              <ReflectionEvidence votes={reflection.scoredVotes} />
+            {reflection.scoredVotes && reflection.scoredVotes.length > 0 && activeId && (
+              <ReflectionEvidence
+                votes={reflection.scoredVotes}
+                bioguideId={activeId}
+                signedIn={signedIn}
+                onAlignmentChange={loadReflections}
+              />
             )}
           </>
         ) : activeRep ? (

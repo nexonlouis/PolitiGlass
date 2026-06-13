@@ -8,7 +8,7 @@ export async function GET() {
     congressGov: {
       configured: Boolean(process.env.CONGRESS_GOV_API_KEY),
       reachable: congressGov,
-      usedFor: ["federal_official_lookup"],
+      usedFor: ["address_to_officials_primary", "federal_official_lookup"],
     },
     legislationDatabase: {
       configured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
@@ -17,7 +17,7 @@ export async function GET() {
     },
     geocodio: {
       configured: Boolean(process.env.GEOCODIO_API_KEY),
-      usedFor: ["address_to_officials_primary"],
+      usedFor: ["address_to_officials_fallback"],
     },
     civiq: {
       configured: true,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppLogo } from "@/components/layout/AppLogo";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -13,8 +14,9 @@ export default function HomePage() {
           className="pointer-events-none absolute -right-4 -top-4 h-28 w-28 rounded-full border border-slate-400/40 dark:border-slate-500/30"
           aria-hidden
         />
+        <AppLogo size="lg" href={null} className="mb-1" />
         <p className="text-sm font-medium uppercase tracking-widest text-slate-500">
-          CivicMirror
+          Nonpartisan civic engagement
         </p>
         <h1 className="mt-3 max-w-xl text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
           Break through the distortion. See who represents you clearly.

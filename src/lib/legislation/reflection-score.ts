@@ -1,3 +1,5 @@
+import { dedupeVotesByBill } from "@/lib/legislation/dedupe-votes-by-bill";
+import type { AlignmentOverrideMap } from "@/lib/reflection/overrides";
 import type { IssueStance } from "@/lib/types/issue-tags";
 import type { ReflectionScoreResult, VoteAlignmentItem } from "@/lib/types";
 
@@ -18,6 +20,8 @@ export interface MemberVoteRecord {
 export interface ComputeReflectionScoreOptions {
   /** Include every analyzed vote in the result (for evidence UI). */
   includeAllVotes?: boolean;
+  /** billId → aligned; manual overrides take precedence over tag-based alignment. */
+  alignmentOverrides?: AlignmentOverrideMap;
 }
 
 /**
@@ -52,8 +56,11 @@ export function computeReflectionScore(
     }
 
     const repSupports = v.vote === "Yea";
-    const aligned =
+    const autoAligned =
       (v.userSupportsBill && repSupports) || (!v.userSupportsBill && !repSupports);
+    const override = options.alignmentOverrides?.get(v.billId);
+    const aligned = override ?? autoAligned;
+    const alignmentSource = override === undefined ? "auto" : "manual";
 
     const alignmentValue = aligned ? 1 : -1;
     weightedSum += alignmentValue * effectiveWeight;
@@ -71,6 +78,8 @@ export function computeReflectionScore(
       issueSlug: v.issueSlug,
       userStance: v.userStance,
       aligned,
+      autoAligned,
+      alignmentSource,
     });
   }
 
@@ -92,16 +101,23 @@ export function computeReflectionScore(
   const confidence =
     items.length < 5 ? "low" : items.length < 16 ? "moderate" : "strong";
 
-  const alignedItems = items.filter((i) => i.aligned).slice(0, 3);
-  const divergedItems = items.filter((i) => !i.aligned).slice(0, 3);
+  const evidenceItems = dedupeVotesByBill(items);
+  const alignedItems = evidenceItems.filter((i) => i.aligned).slice(0, 3);
+  const divergedItems = evidenceItems.filter((i) => !i.aligned).slice(0, 3);
+
+  const manualCount = evidenceItems.filter((i) => i.alignmentSource === "manual").length;
+  const message =
+    manualCount > 0
+      ? `Based on ${evidenceItems.length} bills (${manualCount} adjusted by you).`
+      : `Based on ${evidenceItems.length} bills matching your priority issues.`;
 
   return {
     score,
     confidence,
     votesAnalyzed: items.length,
-    message: `Based on ${items.length} votes across your priority issues.`,
+    message,
     aligned: alignedItems,
     diverged: divergedItems,
-    scoredVotes: options.includeAllVotes ? items : undefined,
+    scoredVotes: options.includeAllVotes ? evidenceItems : undefined,
   };
 }

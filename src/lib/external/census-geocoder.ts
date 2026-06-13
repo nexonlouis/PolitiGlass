@@ -1,4 +1,5 @@
 import { parseUsAddress } from "@/lib/address/parse-us-address";
+import { getCurrentCongress } from "@/lib/config/congress";
 
 export interface CensusDistrictResult {
   stateCode: string;
@@ -6,13 +7,27 @@ export interface CensusDistrictResult {
   lookupZip: string | null;
 }
 
+interface CensusGeoRow {
+  BASENAME?: string;
+  CD119?: string;
+  NAME?: string;
+}
+
 interface CensusMatch {
   addressComponents?: { state?: string; zip?: string };
-  geographies?: Record<string, Array<{ BASENAME?: string }>>;
+  geographies?: Record<string, CensusGeoRow[]>;
 }
+
+/** Public_AR_Current — most up-to-date address ranges. */
+const CENSUS_BENCHMARK = "4";
+/** Current_Current — geographies aligned with the current benchmark. */
+const CENSUS_VINTAGE = "4";
+/** 119th Congressional Districts layer (see Census Geocoder User Guide, Table 3). */
+const CONGRESSIONAL_DISTRICT_LAYER = "54";
 
 /**
  * Resolves congressional district using the US Census Bureau geocoder (free, no API key).
+ * Uses current address ranges and 119th Congress district boundaries.
  */
 export async function geocodeCongressionalDistrict(
   address: string,
@@ -24,8 +39,9 @@ export async function geocodeCongressionalDistrict(
     "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress",
   );
   url.searchParams.set("address", query);
-  url.searchParams.set("benchmark", "2020");
-  url.searchParams.set("vintage", "2020");
+  url.searchParams.set("benchmark", CENSUS_BENCHMARK);
+  url.searchParams.set("vintage", CENSUS_VINTAGE);
+  url.searchParams.set("layers", CONGRESSIONAL_DISTRICT_LAYER);
   url.searchParams.set("format", "json");
 
   try {
@@ -44,8 +60,11 @@ export async function geocodeCongressionalDistrict(
       null;
     if (!stateCode || stateCode.length !== 2) return null;
 
-    const districtNumber = findCongressionalDistrictNumber(match.geographies);
-    if (!districtNumber) return null;
+    const districtNumber = findCongressionalDistrictNumber(
+      stateCode,
+      match.geographies,
+    );
+    if (districtNumber === null) return null;
 
     return {
       stateCode,
@@ -59,14 +78,58 @@ export async function geocodeCongressionalDistrict(
 }
 
 function findCongressionalDistrictNumber(
+  stateCode: string,
   geographies: CensusMatch["geographies"],
 ): string | null {
   if (!geographies) return null;
 
-  for (const key of Object.keys(geographies)) {
-    if (!key.includes("Congressional District")) continue;
-    const basename = geographies[key]?.[0]?.BASENAME;
-    if (basename) return basename;
+  const congress = getCurrentCongress();
+  const preferredKey = `${congress}th Congressional Districts`;
+
+  const layers = Object.entries(geographies).filter(([key]) =>
+    key.includes("Congressional District"),
+  );
+  layers.sort(([a], [b]) => {
+    if (a === preferredKey) return -1;
+    if (b === preferredKey) return 1;
+    const sessionScore = (key: string) => {
+      const match = key.match(/(\d+)th Congressional Districts/);
+      return match ? -Number(match[1]) : -999;
+    };
+    return sessionScore(a) - sessionScore(b);
+  });
+
+  for (const [, rows] of layers) {
+    const row = rows?.[0];
+    if (!row) continue;
+    const normalized = normalizeCongressionalDistrictNumber(stateCode, row);
+    if (normalized !== null) return normalized;
   }
+
+  return null;
+}
+
+function normalizeCongressionalDistrictNumber(
+  stateCode: string,
+  row: CensusGeoRow,
+): string | null {
+  // Congress.gov member API uses district 0 for DC's delegate and at-large states.
+  if (stateCode === "DC") return "0";
+
+  const cdField = row.CD119?.trim();
+  if (cdField && /^\d+$/.test(cdField)) {
+    return String(parseInt(cdField, 10));
+  }
+
+  const basename = row.BASENAME?.trim() ?? "";
+  if (/^\d+$/.test(basename)) {
+    return String(parseInt(basename, 10));
+  }
+
+  const label = `${basename} ${row.NAME ?? ""}`;
+  if (/at large/i.test(label)) {
+    return "0";
+  }
+
   return null;
 }

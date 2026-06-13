@@ -7,31 +7,30 @@ Nonpartisan civic engagement app: find your elected officials, personalize issue
 ```
 Address lookup (live APIs)          Batch legislation pipeline (offline)
 ─────────────────────────          ─────────────────────────────────────
-Geocodio / Census / Congress.gov   unitedstates/congress (Python scrape)
-        │                                    │
-        ▼                                    ▼
-   Your representatives              JSON on disk → Supabase Postgres
-        │                           (bills, roll_call_votes, positions)
+Census Geocoder + Congress.gov     unitedstates/congress (Python scrape)
+(Geocodio / CIV.IQ fallback)               │
+        │                                    ▼
+        ▼                          JSON on disk → Supabase Postgres
+   Your representatives            (bills, roll_call_votes, positions)
         │                                    │
         └──────────────┬─────────────────────┘
                        ▼
               Next.js API + Dashboard
-    reflection score · bill evidence · voting records · forum
+    reflection score · bill evidence · per-bill overrides · forum
 ```
 
-**Representative lookup** uses live upstream APIs at request time.
+**Representative lookup** uses live upstream APIs at request time. The primary path is the **US Census Geocoder** (current **119th** congressional district boundaries) plus the **Congress.gov API** for current House and Senate members. Geocodio and CIV.IQ are fallbacks.
 
-**Voting records and reflection scores** read from **Supabase only** — populated by batch ingest from [unitedstates/congress](https://github.com/unitedstates/congress), not from Congress.gov at page load.
-
-Congress.gov (with a Census geocoder fallback) is still used to resolve **who** represents an address when Geocodio is unavailable.
+**Voting records and reflection scores** read from **Supabase only** — populated by batch ingest from [unitedstates/congress](https://github.com/unitedstates/congress), not from Congress.gov at page load. Senate roll calls use LIS→Bioguide ID mapping at ingest/query time.
 
 ## Stack
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS
 - **Supabase** — Auth, PostgreSQL, RLS, Realtime (district forum)
-- **Live lookup** — Geocodio, US Census Geocoder, Congress.gov, CIV.IQ (fallback), demo mode
+- **Live lookup** — Census Geocoder + Congress.gov (primary), Geocodio, CIV.IQ (fallback), demo mode
 - **Legislation data** — [unitedstates/congress](https://github.com/unitedstates/congress) → `scripts/ingest-congress` → Supabase
 - **Bill tagging** — `scripts/tag-bills` (subject map + optional [Ollama](https://ollama.com) `gemma4`)
+- **Bill metadata** — Congress.gov CRS summaries cached to `bills` when `CONGRESS_GOV_API_KEY` is set
 
 ## Quick start (app)
 
@@ -61,8 +60,9 @@ For **live official lookup** (recommended):
 
 | Variable | Purpose |
 |----------|---------|
-| `GEOCODIO_API_KEY` | Primary address → legislators |
-| `CONGRESS_GOV_API_KEY` | Fallback member lookup (not used for votes) |
+| `CONGRESS_GOV_API_KEY` | **Primary** — district members + CRS bill summaries |
+| `GEOCODIO_API_KEY` | Optional fallback address → legislators |
+| `CONGRESS_NUMBER` | Congress session for member lookup (default `119`) |
 | `CIVIC_MIRROR_DEMO_MODE=false` | Avoid mock officials when APIs fail |
 
 ### 3. Supabase
@@ -78,7 +78,8 @@ For **live official lookup** (recommended):
    | `004_ingest_service_role_policies.sql` | Ingest script write access |
    | `005_legislation_public_read.sql` | Anon read for legislation tables |
    | `006_vote_scoring_relevant.sql` | Filter procedural votes from scoring |
-   | `007_member_votes_bill_summary.sql` | Bill summary on enriched vote view (optional) |
+   | `007_member_votes_bill_summary.sql` | Bill summary on enriched vote view |
+   | `008_user_reflection_overrides.sql` | Per-bill alignment overrides (signed-in users) |
 
 3. Enable Email auth under Authentication → Providers.
 
@@ -155,11 +156,14 @@ See [scripts/tag-bills/README.md](scripts/tag-bills/README.md) for dry-run expla
 
 The dashboard compares your official's roll-call votes to your stated priorities:
 
-1. **Issue tags** — you pick 3–8 from ~28 curated slugs during onboarding.
+1. **Issue tags** — you pick 3–8 from ~28 curated slugs during onboarding (editable on `/profile`).
 2. **Stance** — each tag is **support** (want Yea on bills advancing that issue) or **oppose** (want Nay).
 3. **Bill matching** — only votes on bills tagged with an issue you selected count toward the score.
 4. **Procedural filter** — chamber process votes (previous question, rules resolutions, etc.) are excluded by default.
-5. **Bill evidence** — expand "Show N bills used in this score" to see title, CRS summary (when ingested), rep vote, and alignment per bill.
+5. **Bill evidence** — per-official House/Senate tabs; expand "Show N bills used in this score" for title, CRS summary, rep vote, and alignment.
+6. **Per-bill overrides** — signed-in users can tap **You support** / **You oppose** on a bill if their view differs from issue-tag defaults. Aligned/Diverged updates from how the rep voted. Overrides are stored in `user_reflection_overrides` and refetched into the score.
+
+Omnibus bills with multiple roll calls on the same `bill_id` are deduplicated to one evidence row per bill.
 
 User preferences are stored in `user_demographics.issue_tag_weights` as JSON per tag:
 
@@ -174,7 +178,7 @@ User preferences are stored in `user_demographics.issue_tag_weights` as JSON per
 - Pro highlights add with `support` stance; anti highlights add with `oppose` stance.
 - Each selected tag can be toggled between Support / Oppose before saving.
 
-Tag definitions and pro/anti graph: `src/lib/constants/issue-tags.ts`.
+Tag definitions and pro/anti graph: `src/lib/constants/issue-tags.ts`. Legacy bill tag slugs are aliased at scoring time via `src/lib/legislation/bill-tag-aliases.ts`.
 
 ## Routes
 
@@ -184,6 +188,7 @@ Tag definitions and pro/anti graph: `src/lib/constants/issue-tags.ts`.
 | `/onboarding` | Address → demographics → issue tags (with pro/anti hints) → reveal |
 | `/auth` | Sign up / sign in |
 | `/dashboard` | Officials, reflection score + bill evidence, forum preview |
+| `/profile` | Username, demographics, issue tags (signed in) |
 | `/forum` | District discussion board (posts, votes, comments, Realtime) |
 
 ## API routes
@@ -193,7 +198,9 @@ Tag definitions and pro/anti graph: `src/lib/constants/issue-tags.ts`.
 | `/api/lookup-representatives` | POST | No | Address → district + federal officials (live APIs) |
 | `/api/suggest-tags` | POST | No | Demographics → ranked tag suggestions + display order |
 | `/api/voting-records` | GET | No | Member roll-call votes from Supabase |
-| `/api/reflection-score` | GET | No | Stance-aware alignment score + optional bill evidence |
+| `/api/reflection-score` | GET | Optional | Stance-aware alignment score + bill evidence; loads overrides when signed in |
+| `/api/reflection-overrides` | PUT / DELETE | Yes | Save or clear per-bill alignment override |
+| `/api/profile` | GET / PATCH | Yes | Load or update username, demographics, tag preferences |
 | `/api/health/data-sources` | GET | No | Which data sources are configured |
 | `/api/onboarding/complete` | POST | Yes | Save profile, demographics, tag preferences, saved reps |
 
@@ -233,9 +240,9 @@ Both voting and reflection endpoints return `"source": "database"`.
 | Source | Used for | Runtime |
 |--------|----------|---------|
 | **Supabase** (`roll_call_*`, `bills`) | Voting records, reflection score, bill summaries | Read at request time |
-| **Geocodio** | Address → legislators | Live |
-| **US Census Geocoder** | Address → congressional district | Live (free) |
-| **Congress.gov API** | Current member lookup fallback | Live |
+| **US Census Geocoder** | Address → current congressional district (119th) | Live (free) |
+| **Congress.gov API** | District → current House/Senate members; CRS summaries | Live |
+| **Geocodio** | Address → legislators (fallback) | Live |
 | **CIV.IQ** | Address / officials fallback | Live |
 | **unitedstates/congress** | Official House + Senate roll-call JSON + bill metadata | Batch scrape → ingest |
 | **Demo mode** | Mock officials when all lookups fail | Live fallback |
@@ -254,25 +261,33 @@ Procedural votes are stored but **excluded from reflection scoring** by default 
 | Graph helpers (sort, highlights) | `src/lib/constants/issue-tag-graph.ts` |
 | Demographic ranking | `src/lib/demographics/suggest-tags.ts` |
 | Bill `issue_slugs` | `scripts/tag-bills` → `bills.issue_slugs` |
+| Legacy slug aliases | `src/lib/legislation/bill-tag-aliases.ts` |
 
 ## Privacy model
 
 - `profiles` — username, avatar, **district only** (community-visible)
 - `user_demographics` — income bracket, education, issue tags + stances (RLS: owner-only)
 - `saved_representatives` — user's saved officials (owner-only)
+- `user_reflection_overrides` — per-bill alignment overrides (owner-only)
 
 ## Project layout
 
 ```
 docs/design/                 Design notes (congress ingestion)
+public/logo.jpg              App logo + favicon (src/app/icon.jpg)
 scripts/ingest-congress/     unitedstates JSON → Supabase upsert
 scripts/tag-bills/           Bill issue_slugs (subject map + Ollama)
 src/app/api/                 Next.js API routes
+src/app/profile/             Profile editor page
+src/components/layout/       AppLogo, SiteNav (auth-aware)
 src/components/onboarding/   IssueTagPicker, OnboardingWizard
-src/components/dashboard/    ReflectionEvidence (bill title + summary)
+src/components/dashboard/    OfficialReflectionTabs, ReflectionEvidence
+src/components/profile/      ProfileEditor, DemographicsFields
 src/lib/constants/           Issue tag catalog + pro/anti graph
-src/lib/legislation/         Scoring, pickIssueMatch, vote-scoring filter
-supabase/migrations/         SQL schema (001–007)
+src/lib/external/            Census geocoder, Congress.gov, Geocodio, CIV.IQ
+src/lib/legislation/         Scoring, dedupe, bill display, vote-scoring filter
+src/lib/reflection/          Alignment overrides + UI helpers
+supabase/migrations/         SQL schema (001–008)
 ```
 
 ## Roadmap
@@ -285,6 +300,10 @@ supabase/migrations/         SQL schema (001–007)
 - [x] Stance-aware reflection scoring (support / oppose)
 - [x] Bill evidence UI (title + summary on dashboard)
 - [x] Procedural vote filtering
+- [x] House + Senate reflection tabs; Senate LIS ID fixes
+- [x] Profile page (username, demographics, issue tags)
+- [x] Per-bill reflection overrides (You support / oppose)
+- [x] Current 119th congressional district lookup (Census geocoder)
 - [ ] Re-tag bills after tag catalog changes (`npm run tag -- --force`)
 - [ ] Scheduled scrape + ingest (cron / GitHub Actions)
 - [ ] YouTube curated feed per representative

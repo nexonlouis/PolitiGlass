@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { AppLogo } from "@/components/layout/AppLogo";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,9 +123,7 @@ function AuthForm() {
 export default function AuthPage() {
   return (
     <main className="mx-auto flex min-h-full max-w-md flex-1 flex-col justify-center px-4 py-10">
-      <Link href="/" className="mb-6 text-sm text-slate-500 hover:text-slate-800">
-        ← CivicMirror
-      </Link>
+      <AppLogo size="sm" className="mb-6 text-slate-500 [&_span]:font-normal [&_span]:text-slate-500 hover:[&_span]:text-slate-800 dark:hover:[&_span]:text-slate-200" />
       <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
         <AuthForm />
       </Suspense>

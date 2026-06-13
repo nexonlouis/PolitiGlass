@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { PROFILE_UPDATED_EVENT } from "@/lib/profile/events";
 import { createClient } from "@/lib/supabase/client";
 
 const linkClass =
@@ -10,32 +11,33 @@ const linkClass =
 
 export function SiteNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [signedIn, setSignedIn] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadUser = useCallback(async () => {
     const supabase = createClient();
-
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setSignedIn(!!user);
-      if (!user) {
-        setUsername(null);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", user.id)
-        .single();
-      setUsername(profile?.username ?? null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setSignedIn(!!user);
+    if (!user) {
+      setUsername(null);
+      return;
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+    setUsername(profile?.username ?? null);
+  }, []);
+
+  useEffect(() => {
     void loadUser();
 
+    const supabase = createClient();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
@@ -43,7 +45,21 @@ export function SiteNav() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUser, pathname]);
+
+  useEffect(() => {
+    const onProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ username?: string }>).detail;
+      if (detail?.username) {
+        setUsername(detail.username);
+        return;
+      }
+      void loadUser();
+    };
+
+    window.addEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, onProfileUpdated);
+  }, [loadUser]);
 
   const signOut = async () => {
     const supabase = createClient();
@@ -53,6 +69,8 @@ export function SiteNav() {
     router.push("/");
     router.refresh();
   };
+
+  const profileLabel = username ? `Profile[${username}]` : "Profile";
 
   return (
     <div className="flex items-center gap-4 text-sm">
@@ -67,11 +85,9 @@ export function SiteNav() {
       </Link>
       {signedIn ? (
         <>
-          {username && (
-            <span className="hidden text-slate-500 sm:inline dark:text-slate-400">
-              {username}
-            </span>
-          )}
+          <Link href="/profile" className={linkClass}>
+            {profileLabel}
+          </Link>
           <button type="button" onClick={signOut} className={linkClass}>
             Sign out
           </button>

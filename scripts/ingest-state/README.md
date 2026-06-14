@@ -42,6 +42,8 @@ npm run ingest -- --state FL --session 2026D
 | `state_roll_call_votes` | `*_votes.csv` |
 | `state_roll_call_positions` | `*_vote_people.csv` |
 
+Before positions are inserted, **stub legislator rows** are created for any `voter_id` in `vote_people` that is missing from `people/current.json` (former members, etc.). Stubs use the voter name from the CSV and `ignoreDuplicates` so full current-member rows are not overwritten.
+
 Votes with `committee-passage` and similar motions are stored with `scoring_relevant = false` (see `src/lib/legislation/state-vote-scoring.ts`).
 
 ## Verify

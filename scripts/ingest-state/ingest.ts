@@ -17,14 +17,20 @@ import {
   buildBillChamberMap,
   buildPartyMap,
   buildSummaryMap,
+  legislatorPersonIdSet,
   normalizeBillRow,
   normalizeLegislatorRow,
   normalizePositionRow,
   normalizeVoteRow,
   buildOrganizationChamberMap,
+  type LegislatorRow,
   type PeopleJsonFile,
 } from "./lib/normalize.js";
 import { createAdminClient } from "./lib/supabase-admin.js";
+import {
+  buildStubLegislators,
+  buildVoteChamberMap,
+} from "./lib/stub-legislators.js";
 import { readCsvFromZip } from "./lib/zip-csv.js";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -69,6 +75,22 @@ async function finishIngestRun(
   if (error) throw new Error(`ingest_runs update: ${error.message}`);
 }
 
+async function upsertLegislatorStubs(
+  supabase: ReturnType<typeof createAdminClient>,
+  stubs: LegislatorRow[],
+): Promise<void> {
+  if (stubs.length === 0) return;
+
+  for (let i = 0; i < stubs.length; i += 200) {
+    const chunk = stubs.slice(i, i + 200);
+    const { error } = await supabase.from("state_legislators").upsert(chunk, {
+      onConflict: "person_id",
+      ignoreDuplicates: true,
+    });
+    if (error) throw error;
+  }
+}
+
 async function ingestLegislators(
   supabase: ReturnType<typeof createAdminClient> | null,
   bundle: SessionBundle,
@@ -94,11 +116,30 @@ async function ingestLegislators(
   return { processed: rows.length, upserted: rows.length, errors: 0, rows };
 }
 
+async function ensureStubLegislators(
+  supabase: ReturnType<typeof createAdminClient> | null,
+  stubs: LegislatorRow[],
+  knownPersonIds: Set<string>,
+  dryRun: boolean,
+): Promise<void> {
+  if (stubs.length === 0) return;
+
+  console.log(`  legislator stubs: ${stubs.length} (historical / vote-only voters)`);
+
+  if (dryRun) return;
+
+  await upsertLegislatorStubs(supabase!, stubs);
+  for (const stub of stubs) {
+    knownPersonIds.add(stub.person_id);
+  }
+}
+
 async function ingestSession(
   supabase: ReturnType<typeof createAdminClient> | null,
   bundle: SessionBundle,
   opts: { dryRun: boolean; votesOnly: boolean; billsOnly: boolean; limit?: number },
-  legislators: Array<{ person_id: string; party: string | null }>,
+  knownPersonIds: Set<string>,
+  partyByPersonId: Map<string, string | null>,
 ) {
   const fileStem = `${bundle.stateAbbr}_${bundle.sessionId}`;
   console.log(`\n→ Session ${bundle.sessionId} (${path.basename(bundle.zipPath)})`);
@@ -113,7 +154,6 @@ async function ingestSession(
 
   const summaryByBillId = buildSummaryMap(abstractRows);
   const orgChamber = buildOrganizationChamberMap(orgRows);
-  const partyByPersonId = buildPartyMap(legislators);
 
   const bills = billRows
     .map((row) => normalizeBillRow(row, summaryByBillId, bundle.stateAbbr))
@@ -134,9 +174,21 @@ async function ingestSession(
 
   const scoringVotes = votes.filter((v) => v.scoring_relevant).length;
 
+  const voteChamberById = buildVoteChamberMap(votes);
+  const stubs = buildStubLegislators(
+    positionRows,
+    voteChamberById,
+    knownPersonIds,
+    bundle.stateAbbr,
+  );
+
   console.log(
     `  parsed: ${bills.length} bills, ${votes.length} votes (${scoringVotes} scoring-relevant), ${positions.length} positions`,
   );
+
+  if (!opts.billsOnly) {
+    await ensureStubLegislators(supabase, stubs, knownPersonIds, opts.dryRun);
+  }
 
   if (opts.dryRun) {
     if (bills[0]) console.log("  sample bill:", bills[0].identifier, bills[0].title?.slice(0, 60));
@@ -159,6 +211,7 @@ async function ingestSession(
   }
 
   let errors = 0;
+  let positionsInserted = 0;
 
   if (!opts.votesOnly) {
     for (let i = 0; i < bills.length; i += 200) {
@@ -197,12 +250,19 @@ async function ingestSession(
       if (error) {
         errors++;
         if (errors <= 3) console.error("  position insert error:", error.message);
+      } else {
+        positionsInserted += chunk.length;
       }
       if ((i + POSITION_BATCH) % 5000 === 0 && i > 0) {
-        console.log(`  … positions ${i + POSITION_BATCH}/${positions.length}`);
+        console.log(`  … positions ${positionsInserted}/${positions.length}`);
       }
     }
-    console.log(`  positions inserted: ${positions.length}`);
+    console.log(`  positions inserted: ${positionsInserted}/${positions.length}`);
+    if (positionsInserted < positions.length) {
+      console.warn(
+        `  warning: ${positions.length - positionsInserted} positions failed — re-run ingest after fixing data`,
+      );
+    }
   }
 
   return {
@@ -253,6 +313,9 @@ async function main(): Promise<void> {
     opts.dryRun,
   );
 
+  const knownPersonIds = legislatorPersonIdSet(legislatorResult.rows);
+  const partyByPersonId = buildPartyMap(legislatorResult.rows);
+
   let totals = {
     bills_processed: 0,
     bills_upserted: 0,
@@ -272,7 +335,8 @@ async function main(): Promise<void> {
         supabase,
         bundle,
         opts,
-        legislatorResult.rows,
+        knownPersonIds,
+        partyByPersonId,
       );
       totals = {
         bills_processed: totals.bills_processed + result.bills_processed,

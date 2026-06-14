@@ -22,10 +22,23 @@ export interface PeopleJsonFile {
   }>;
 }
 
+export interface LegislatorRow {
+  person_id: string;
+  state: string;
+  name: string;
+  given_name: string | null;
+  family_name: string | null;
+  party: string | null;
+  chamber: "lower" | "upper";
+  district: string | null;
+  image_url: string | null;
+  email: string | null;
+}
+
 export function normalizeLegislatorRow(
   person: PeopleJsonFile["people"][0],
   stateAbbr: string,
-) {
+): LegislatorRow | null {
   const chamber = chamberFromClassification(person.current_role?.org_classification);
   if (!chamber) return null;
 
@@ -163,4 +176,10 @@ export function buildPartyMap(
   legislators: Array<{ person_id: string; party: string | null }>,
 ): Map<string, string | null> {
   return new Map(legislators.map((l) => [l.person_id, l.party]));
+}
+
+export function legislatorPersonIdSet(
+  legislators: Array<{ person_id: string }>,
+): Set<string> {
+  return new Set(legislators.map((l) => l.person_id));
 }

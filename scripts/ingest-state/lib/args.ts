@@ -6,7 +6,8 @@ export interface IngestCliOptions {
   state: string;
   year?: number;
   session?: string;
-  includeSpecialSessions: boolean;
+  /** When set with --year, ingest only the regular session id (e.g. 2026 not 2026D). */
+  regularSessionOnly: boolean;
   dryRun: boolean;
   votesOnly: boolean;
   billsOnly: boolean;
@@ -16,7 +17,7 @@ export interface IngestCliOptions {
 export function parseArgs(argv: string[]): IngestCliOptions {
   const opts: IngestCliOptions = {
     state: "",
-    includeSpecialSessions: false,
+    regularSessionOnly: false,
     dryRun: false,
     votesOnly: false,
     billsOnly: false,
@@ -27,7 +28,11 @@ export function parseArgs(argv: string[]): IngestCliOptions {
     if (arg === "--dry-run") opts.dryRun = true;
     else if (arg === "--votes-only") opts.votesOnly = true;
     else if (arg === "--bills-only") opts.billsOnly = true;
-    else if (arg === "--include-special-sessions") opts.includeSpecialSessions = true;
+    else if (arg === "--regular-session-only") opts.regularSessionOnly = true;
+    else if (arg === "--include-special-sessions") {
+      // Alias kept for parity with download-openstates; ingest includes on-disk
+      // special sessions by default when using --year.
+    }
     else if (arg.startsWith("--state=")) opts.state = arg.split("=")[1].toUpperCase();
     else if (arg === "--state") opts.state = argv[++i].toUpperCase();
     else if (arg.startsWith("--year=")) opts.year = Number(arg.split("=")[1]);
@@ -61,14 +66,15 @@ Usage:
 
 Options:
   --state <ABBR>              State postal code (required)
-  --year <YYYY>               Ingest matching sessions (regular only by default)
-  --session <id>              Single session (e.g. 2026, 2026D)
-  --include-special-sessions  With --year, include special sessions
+  --year <YYYY>               Ingest all downloaded sessions for that year
+                              (e.g. 2026, 2026D, 2026E when present on disk)
+  --session <id>              Single session only (e.g. 2026, 2026D)
+  --regular-session-only      With --year, ingest only the regular session (2026)
   --dry-run                   Parse and log without writing
   --votes-only / --bills-only Limit which entities are upserted
-  --limit <n>                 Cap votes processed (debug)
+  --limit <n>                 Cap votes processed per session (debug)
 
-Requires migration 009_state_legislation.sql and OPENSTATES_DATA_DIR downloads.
+Requires migration 009_state_legislation.sql and download-openstates data.
 `);
 }
 
@@ -79,6 +85,12 @@ export interface SessionBundle {
   peopleJsonPath: string;
 }
 
+export interface SessionDiscovery {
+  bundles: SessionBundle[];
+  /** Session folders on disk that matched --year but were excluded by filters. */
+  skipped: string[];
+}
+
 function sessionMatchesFilters(
   sessionId: string,
   opts: IngestCliOptions,
@@ -87,13 +99,17 @@ function sessionMatchesFilters(
   if (opts.year === undefined) return true;
   const yearStr = String(opts.year);
   if (!sessionId.startsWith(yearStr)) return false;
-  if (opts.includeSpecialSessions) return true;
-  return sessionId === yearStr;
+  if (opts.regularSessionOnly) return sessionId === yearStr;
+  return true;
+}
+
+function isSessionFolderName(name: string): boolean {
+  return /^[0-9]{4}[A-Z]?$/.test(name);
 }
 
 export async function discoverSessionBundles(
   opts: IngestCliOptions,
-): Promise<SessionBundle[]> {
+): Promise<SessionDiscovery> {
   const dataRoot = resolveDataRoot();
   const statePath = stateDir(dataRoot, opts.state);
   const peoplePath = peopleJsonPath(dataRoot, opts.state);
@@ -108,14 +124,28 @@ export async function discoverSessionBundles(
   }
 
   const bundles: SessionBundle[] = [];
+  const skipped: string[] = [];
 
   for (const sessionId of entries) {
-    if (!sessionMatchesFilters(sessionId, opts)) continue;
+    if (!isSessionFolderName(sessionId)) continue;
 
     const dir = sessionDir(dataRoot, opts.state, sessionId);
-    const files = await fs.readdir(dir);
+    let files: string[];
+    try {
+      files = await fs.readdir(dir);
+    } catch {
+      continue;
+    }
+
     const zip = files.find((f) => f.endsWith(".zip"));
     if (!zip) continue;
+
+    if (!sessionMatchesFilters(sessionId, opts)) {
+      if (opts.year !== undefined && sessionId.startsWith(String(opts.year))) {
+        skipped.push(sessionId);
+      }
+      continue;
+    }
 
     bundles.push({
       stateAbbr: opts.state,
@@ -126,5 +156,6 @@ export async function discoverSessionBundles(
   }
 
   bundles.sort((a, b) => a.sessionId.localeCompare(b.sessionId));
-  return bundles;
+  skipped.sort();
+  return { bundles, skipped };
 }

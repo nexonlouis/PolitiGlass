@@ -226,15 +226,23 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const bundles = await discoverSessionBundles(opts);
+  const { bundles, skipped } = await discoverSessionBundles(opts);
   if (bundles.length === 0) {
     console.error("No session archives found for filters. Run download-openstates first.");
+    if (skipped.length > 0) {
+      console.error(
+        `  On disk but skipped: ${skipped.join(", ")} (remove --regular-session-only or use --session)`,
+      );
+    }
     process.exit(1);
   }
 
   console.log("CivicMirror state ingest");
   console.log("  state:", opts.state);
   console.log("  sessions:", bundles.map((b) => b.sessionId).join(", "));
+  if (skipped.length > 0) {
+    console.log(`  skipped: ${skipped.join(", ")} (--regular-session-only)`);
+  }
   console.log("  dry-run:", opts.dryRun);
 
   const supabase = opts.dryRun ? null : createAdminClient();

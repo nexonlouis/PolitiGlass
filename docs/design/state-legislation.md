@@ -95,10 +95,12 @@ Do **not** use 2018 boundary GeoJSON for point-in-polygon in MVP.
 |------|----------|
 | `--state FL` | One state (required unless `--all-states`) |
 | `--year 2026` | Sessions whose `identifier` is `2026` or starts with `2026` |
-| (default) | **Regular session only** — `identifier === year` exactly (e.g. `2026`, not `2026D`) |
-| `--include-special-sessions` | Also `2026D`, `2026E`, … |
+| (download default) | **Regular session only** — `identifier === year` exactly |
+| `--include-special-sessions` (download) | Also `2026D`, `2026E`, … |
 | `--session 2026` | Explicit single session identifier |
 | `--all-states` | Every state jurisdiction (heavy) |
+
+**Ingest** (`scripts/ingest-state`): `--year 2026` ingests every matching session **folder on disk** (regular + specials if downloaded). Use `--regular-session-only` to ingest only `2026`.
 
 ## Migration 009 (planned, not yet applied)
 

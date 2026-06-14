@@ -20,13 +20,18 @@ npm install
 ## Usage
 
 ```bash
-# Florida 2026 regular session
+# Florida 2026 — all downloaded sessions (2026, 2026D, 2026E, …)
 npm run ingest:dry -- --state FL --year 2026
 npm run ingest -- --state FL --year 2026
 
-# Single session, votes only, capped (debug)
-npm run ingest -- --state FL --session 2026 --votes-only --limit 20
+# Regular session only (skip special sessions on disk)
+npm run ingest -- --state FL --year 2026 --regular-session-only
+
+# Single session
+npm run ingest -- --state FL --session 2026D
 ```
+
+**Note:** Unlike `download-openstates`, ingest with `--year 2026` includes **every session folder on disk** whose id starts with `2026` (regular + specials). Use `--regular-session-only` to match download’s default of regular session only.
 
 ## What gets written
 

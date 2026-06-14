@@ -80,6 +80,8 @@ data/openstates/
 
 Some states use biennium identifiers (e.g. `20252026`); use `--session` when `--year` does not match.
 
+**Ingest:** `scripts/ingest-state --year 2026` picks up every matching session folder on disk (including specials if you downloaded them). Use `--regular-session-only` on ingest to load only `2026`.
+
 ## Next steps
 
 - [ ] `scripts/ingest-state` — CSV → Supabase (`009_state_legislation.sql`)

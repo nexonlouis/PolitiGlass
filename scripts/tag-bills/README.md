@@ -1,6 +1,6 @@
 # Tag bills (`issue_slugs`)
 
-Maps ingested bills to CivicMirror issue slugs for reflection scoring.
+Maps ingested bills to PolitiGlass issue slugs for reflection scoring.
 
 ## Setup
 

@@ -50,7 +50,7 @@ function slugListBlock(): string {
  * substantive bills must get the best available slug(s) from the catalog.
  */
 export function buildFederalOllamaSystemPrompt(): string {
-  return `You classify U.S. congressional bills into CivicMirror issue tags for civic engagement scoring.
+  return `You classify U.S. congressional bills into PolitiGlass issue tags for civic engagement scoring.
 
 Allowed issue_slugs (use ONLY these exact strings):
 ${slugListBlock()}

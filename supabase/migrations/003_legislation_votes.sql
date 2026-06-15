@@ -1,4 +1,4 @@
--- CivicMirror: batch-ingested legislation & roll-call votes (unitedstates/congress)
+-- PolitiGlass: batch-ingested legislation & roll-call votes (unitedstates/congress)
 -- Run after 001_initial_schema.sql and 002_forum_realtime.sql
 
 -- ---------------------------------------------------------------------------

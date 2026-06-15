@@ -1,5 +1,5 @@
 {
-  "name": "civic-mirror-ingest-state",
+  "name": "politiglass-ingest-state",
   "private": true,
   "type": "module",
   "scripts": {

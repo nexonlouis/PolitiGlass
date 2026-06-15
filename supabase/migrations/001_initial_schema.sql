@@ -1,4 +1,4 @@
--- CivicMirror initial schema: split public profiles from private demographics
+-- PolitiGlass initial schema: split public profiles from private demographics
 
 -- ---------------------------------------------------------------------------
 -- Tables

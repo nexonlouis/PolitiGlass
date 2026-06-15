@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * CivicMirror — ingest Open States CSV zips into Supabase state_* tables.
+ * PolitiGlass — ingest Open States CSV zips into Supabase state_* tables.
  */
 
 import dotenv from "dotenv";
@@ -297,7 +297,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log("CivicMirror state ingest");
+  console.log("PolitiGlass state ingest");
   console.log("  state:", opts.state);
   console.log("  sessions:", bundles.map((b) => b.sessionId).join(", "));
   if (skipped.length > 0) {

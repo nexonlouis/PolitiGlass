@@ -27,7 +27,7 @@ export default function HomePage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/onboarding">
-            <Button>Calibrate your mirror</Button>
+            <Button>Get started</Button>
           </Link>
           <Link href="/dashboard">
             <Button variant="secondary">View dashboard</Button>

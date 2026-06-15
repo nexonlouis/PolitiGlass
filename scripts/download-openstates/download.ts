@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * CivicMirror — download Open States bulk CSV session archives + people CSV.
+ * PolitiGlass — download Open States bulk CSV session archives + people CSV.
  *
  * See README.md and docs/design/state-legislation.md.
  */

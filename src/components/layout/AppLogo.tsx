@@ -28,7 +28,7 @@ export function AppLogo({
   <>
     <Image
       src="/logo.jpg"
-      alt=""
+      alt="PolitiGlass"
       width={px}
       height={px}
       className="shrink-0 rounded-full"
@@ -36,7 +36,7 @@ export function AppLogo({
     />
     {showWordmark && (
       <span className="font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-        CivicMirror
+        PolitiGlass
       </span>
     )}
   </>

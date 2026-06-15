@@ -340,7 +340,7 @@ export function DistrictForum({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Community forum</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Discuss civic issues with neighbors across CivicMirror. Add optional
+            Discuss civic issues with neighbors across PolitiGlass. Add optional
             issue tags to focus a thread. Only your username is visible — never your
             address or demographics.
           </p>

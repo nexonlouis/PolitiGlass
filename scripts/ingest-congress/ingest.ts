@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * CivicMirror — ingest unitedstates/congress JSON into Supabase.
+ * PolitiGlass — ingest unitedstates/congress JSON into Supabase.
  *
  * Outline implementation: parsing + upsert logic are complete; run with
  * --dry-run first. See README.md and docs/design/congress-vote-ingestion.md.
@@ -246,7 +246,7 @@ async function main() {
   const resolvedData = await resolveDataRoot(dataDir);
   const diag = await diagnoseDataLayout(resolvedData, opts.congress);
 
-  console.log("CivicMirror congress ingest");
+  console.log("PolitiGlass congress ingest");
   console.log("  data root:", resolvedData);
   console.log("  congress:", opts.congress);
   console.log("  dry-run:", opts.dryRun);

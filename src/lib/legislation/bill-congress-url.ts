@@ -1,4 +1,4 @@
-/** Maps CivicMirror bill_id prefix to congress.gov path segment. */
+/** Maps PolitiGlass bill_id prefix to congress.gov path segment. */
 const CONGRESS_GOV_BILL_TYPE: Record<string, string> = {
   hr: "house-bill",
   s: "senate-bill",

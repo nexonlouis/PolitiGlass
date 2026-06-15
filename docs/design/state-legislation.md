@@ -2,7 +2,7 @@
 
 ## Goal
 
-Extend CivicMirror reflection scoring and bill evidence to **state legislators** (House + Senate in each state), using the same batch-download → ingest → tag → serve pattern as federal unitedstates/congress data.
+Extend PolitiGlass reflection scoring and bill evidence to **state legislators** (House + Senate in each state), using the same batch-download → ingest → tag → serve pattern as federal unitedstates/congress data.
 
 **MVP target:** Florida (`FL`), **2026** regular session, floor-relevant votes only.
 
@@ -127,7 +127,7 @@ Do **not** use 2018 boundary GeoJSON for point-in-polygon in MVP.
 ## Environment
 
 ```bash
-# Primary (used by CivicMirror download script)
+# Primary (used by PolitiGlass download script)
 OPENSTATES_PLURAL_API_KEY=
 
 # Alias accepted by pyopenstates and some Open States tooling

@@ -15,9 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CivicMirror — See your representatives clearly",
+  metadataBase: new URL("https://politiglass.com"),
+  title: "PolitiGlass — See your representatives clearly",
   description:
-    "Nonpartisan civic engagement: find your officials, align on issues, and discuss with your district.",
+    "Nonpartisan civic engagement: find your officials, align on issues, and discuss with your community.",
 };
 
 export default function RootLayout({

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DistrictForum } from "@/components/forum/DistrictForum";
 
 export const metadata = {
-  title: "Community forum · CivicMirror",
+  title: "Community forum · PolitiGlass",
 };
 
 export default function ForumPage() {

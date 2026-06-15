@@ -2,7 +2,7 @@ import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Profile · CivicMirror",
+  title: "Profile · PolitiGlass",
 };
 
 export default function ProfilePage() {

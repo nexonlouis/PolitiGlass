@@ -1,6 +1,6 @@
-# CivicMirror
+# PolitiGlass
 
-Nonpartisan civic engagement app: find your elected officials, personalize issue priorities, and see how their roll-call votes align with the issues you support or oppose.
+**https://politiglass.com** — Nonpartisan civic engagement app: find your elected officials, personalize issue priorities, and see how their roll-call votes align with the issues you support or oppose.
 
 ## How it works
 
@@ -63,7 +63,7 @@ For **live official lookup** (recommended):
 | `CONGRESS_GOV_API_KEY` | **Primary** — district members + CRS bill summaries |
 | `GEOCODIO_API_KEY` | Optional fallback address → legislators |
 | `CONGRESS_NUMBER` | Congress session for member lookup (default `119`) |
-| `CIVIC_MIRROR_DEMO_MODE=false` | Avoid mock officials when APIs fail |
+| `POLITIGLASS_DEMO_MODE=false` | Avoid mock officials when APIs fail |
 
 ### 3. Supabase
 

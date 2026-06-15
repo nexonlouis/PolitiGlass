@@ -1,6 +1,6 @@
 # Congress data ingest (unitedstates/congress → Supabase)
 
-Batch pipeline for CivicMirror voting records. See [design doc](../../docs/design/congress-vote-ingestion.md).
+Batch pipeline for PolitiGlass voting records. See [design doc](../../docs/design/congress-vote-ingestion.md).
 
 ## Prerequisites
 
@@ -85,7 +85,7 @@ npm run ingest -- --congress=119 --votes-only --sessions=2026
 
 ```cron
 0 6 * * * cd /path/to/congress && ./run votes --fast
-30 6 * * * cd /path/to/CivicMirror/scripts/ingest-congress && npm run ingest -- --congress=119
+30 6 * * * cd /path/to/PolitiGlass/scripts/ingest-congress && npm run ingest -- --congress=119
 ```
 
 ## After ingest

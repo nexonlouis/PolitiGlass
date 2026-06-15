@@ -1,7 +1,8 @@
 import type { DemographicsInput, DistrictLookupResult } from "@/lib/types";
 import type { IssueTagPreference } from "@/lib/types/issue-tags";
 
-const KEY = "civicmirror_onboarding";
+const KEY = "politiglass_onboarding";
+const LEGACY_KEY = "civicmirror_onboarding";
 
 export interface OnboardingDraft {
   lookup: DistrictLookupResult | null;
@@ -42,7 +43,14 @@ function normalizeDraft(parsed: Partial<OnboardingDraft>): OnboardingDraft {
 export function loadOnboardingDraft(): OnboardingDraft {
   if (typeof window === "undefined") return empty;
   try {
-    const raw = sessionStorage.getItem(KEY);
+    let raw = sessionStorage.getItem(KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(LEGACY_KEY);
+      if (raw) {
+        sessionStorage.setItem(KEY, raw);
+        sessionStorage.removeItem(LEGACY_KEY);
+      }
+    }
     if (!raw) return empty;
     return normalizeDraft(JSON.parse(raw));
   } catch {
@@ -59,4 +67,5 @@ export function saveOnboardingDraft(draft: Partial<OnboardingDraft>) {
 
 export function clearOnboardingDraft() {
   sessionStorage.removeItem(KEY);
+  sessionStorage.removeItem(LEGACY_KEY);
 }

@@ -52,7 +52,7 @@ export async function resolveRepresentatives(address: string): Promise<DistrictL
     return appendStateLegislators(civiq, address);
   }
 
-  if (process.env.CIVIC_MIRROR_DEMO_MODE === "true") {
+  if (process.env.POLITIGLASS_DEMO_MODE === "true") {
     return demoLookup(address);
   }
 

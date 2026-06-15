@@ -1,6 +1,6 @@
 # Tag state bills (`issue_slugs`)
 
-Maps ingested `state_bills` rows to CivicMirror issue slugs for state reflection scoring.
+Maps ingested `state_bills` rows to PolitiGlass issue slugs for state reflection scoring.
 
 ## Setup
 

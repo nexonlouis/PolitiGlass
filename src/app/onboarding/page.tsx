@@ -1,7 +1,7 @@
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export const metadata = {
-  title: "Calibrate · CivicMirror",
+  title: "Calibrate · PolitiGlass",
 };
 
 export default function OnboardingPage() {
@@ -10,7 +10,7 @@ export default function OnboardingPage() {
       <p className="mb-2 text-sm font-medium uppercase tracking-wide text-slate-500">
         Onboarding
       </p>
-      <h1 className="mb-8 text-3xl font-bold tracking-tight">Calibrate your mirror</h1>
+      <h1 className="mb-8 text-3xl font-bold tracking-tight">Set your priorities</h1>
       <OnboardingWizard />
     </main>
   );

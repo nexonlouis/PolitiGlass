@@ -1,7 +1,7 @@
 import { filterAllowedSlugs, type IssueSlug } from "./issue-slugs.js";
 
 /**
- * Maps Congressional / LOC legislative subject phrases to CivicMirror issue slugs.
+ * Maps Congressional / LOC legislative subject phrases to PolitiGlass issue slugs.
  * Keys are lowercase; matching also tries substring overlap.
  */
 const SUBJECT_TO_SLUGS: Record<string, IssueSlug[]> = {

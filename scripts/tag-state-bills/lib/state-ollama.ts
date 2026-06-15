@@ -24,7 +24,7 @@ export function toOllamaBillInput(bill: StateBillRow): BillRow {
 export function buildStateOllamaSystemPrompt(): string {
   const slugList = ALLOWED_ISSUE_SLUGS.map((s) => `- ${s}`).join("\n");
 
-  return `You classify U.S. state legislature bills into CivicMirror issue tags for civic engagement scoring.
+  return `You classify U.S. state legislature bills into PolitiGlass issue tags for civic engagement scoring.
 
 Allowed issue_slugs (use ONLY these exact strings):
 ${slugList}

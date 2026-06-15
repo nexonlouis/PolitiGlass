@@ -2,7 +2,7 @@
 
 ## Goal
 
-Serve **fast, reliable** voting-record and reflection-score data in CivicMirror by **batch-loading** official roll-call votes and related bills into Supabase. The UI and API routes should read **only from Postgres** on user requests—not scrape Congress at page-load time.
+Serve **fast, reliable** voting-record and reflection-score data in PolitiGlass by **batch-loading** official roll-call votes and related bills into Supabase. The UI and API routes should read **only from Postgres** on user requests—not scrape Congress at page-load time.
 
 ## Source: [unitedstates/congress](https://github.com/unitedstates/congress)
 
@@ -39,7 +39,7 @@ Reference wiki: [Votes](https://github.com/unitedstates/congress/wiki/Votes), [B
 }
 ```
 
-Member `id` is the **Bioguide ID**—same identifier CivicMirror already stores on `saved_representatives.bioguide_id`.
+Member `id` is the **Bioguide ID**—same identifier PolitiGlass already stores on `saved_representatives.bioguide_id`.
 
 ## Why batch → database (not live API)
 

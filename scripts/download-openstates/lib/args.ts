@@ -49,7 +49,7 @@ export function parseArgs(argv: string[]): DownloadCliOptions {
 }
 
 export function printHelp(): void {
-  console.log(`CivicMirror — download Open States bulk CSV archives
+  console.log(`PolitiGlass — download Open States bulk CSV archives
 
 Usage:
   npm run download -- --state FL --year 2026

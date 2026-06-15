@@ -2,7 +2,7 @@ import { DashboardView } from "@/components/dashboard/DashboardView";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Dashboard · CivicMirror",
+  title: "Dashboard · PolitiGlass",
 };
 
 export default function DashboardPage() {

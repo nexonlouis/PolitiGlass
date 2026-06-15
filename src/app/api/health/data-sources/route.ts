@@ -27,6 +27,6 @@ export async function GET() {
       configured: true,
       usedFor: ["address_to_congressional_district"],
     },
-    demoMode: process.env.CIVIC_MIRROR_DEMO_MODE === "true",
+    demoMode: process.env.POLITIGLASS_DEMO_MODE === "true",
   });
 }

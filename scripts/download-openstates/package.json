@@ -1,5 +1,5 @@
 {
-  "name": "civic-mirror-download-openstates",
+  "name": "politiglass-download-openstates",
   "private": true,
   "type": "module",
   "scripts": {

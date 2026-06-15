@@ -57,7 +57,7 @@ export function parseArgs(argv: string[]): IngestCliOptions {
 }
 
 export function printHelp(): void {
-  console.log(`CivicMirror — ingest Open States CSV archives into Supabase
+  console.log(`PolitiGlass — ingest Open States CSV archives into Supabase
 
 Usage:
   npm run ingest -- --state FL --year 2026

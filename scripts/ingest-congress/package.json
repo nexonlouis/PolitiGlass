@@ -1,5 +1,5 @@
 {
-  "name": "civic-mirror-ingest-congress",
+  "name": "politiglass-ingest-congress",
   "private": true,
   "type": "module",
   "scripts": {

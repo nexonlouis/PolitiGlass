@@ -1,0 +1,55 @@
+# Build with NEXT_PUBLIC_* available at compile time, then deploy to Cloud Run.
+#
+# Usage (set substitutions to your values):
+#   gcloud builds submit --config deploy/cloudbuild.yaml \
+#     --substitutions=_REGION=us-central1,_SERVICE=politiglass,_SUPABASE_URL=https://xxx.supabase.co,_SUPABASE_ANON_KEY=eyJ...
+#
+# Server-only secrets (SUPABASE_SERVICE_ROLE_KEY, CONGRESS_GOV_API_KEY) are
+# mounted at deploy/runtime via --set-secrets on the deploy step below.
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE: politiglass
+  _SUPABASE_URL: ""
+  _SUPABASE_ANON_KEY: ""
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --port
+      - "8080"
+      - --memory
+      - 512Mi
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY

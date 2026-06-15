@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+.cursor
+data
+scripts/**/node_modules
+.env*
+!.env.example
+npm-debug.log*
+.DS_Store
+coverage
+*.md
+!README.md

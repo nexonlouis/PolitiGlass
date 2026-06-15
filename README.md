@@ -32,6 +32,10 @@ Census Geocoder + Congress.gov     unitedstates/congress (Python scrape)
 - **Bill tagging** — `scripts/tag-bills` (subject map + optional [Ollama](https://ollama.com) `gemma4`)
 - **Bill metadata** — Congress.gov CRS summaries cached to `bills` when `CONGRESS_GOV_API_KEY` is set
 
+## Production hosting (Google Cloud Run)
+
+Deploy the Next.js app to Cloud Run; keep Supabase hosted. See **[deploy/cloud-run.md](deploy/cloud-run.md)** for secrets, `gcloud run deploy`, custom domain **politiglass.com**, and Supabase auth URLs.
+
 ## Quick start (app)
 
 ### 1. Install dependencies

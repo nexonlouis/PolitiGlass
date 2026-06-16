@@ -31,7 +31,7 @@ export function AppLogo({
       alt="PolitiGlass"
       width={px}
       height={px}
-      className="shrink-0 rounded-full"
+      className="shrink-0 rounded-lg"
       priority={size === "lg"}
     />
     {showWordmark && (

@@ -12,6 +12,7 @@ import type { Representative } from "@/lib/types";
 import type { IssueTagPreference } from "@/lib/types/issue-tags";
 import { createClient } from "@/lib/supabase/client";
 import { DistrictForum } from "@/components/forum/DistrictForum";
+import { officialProfilePath } from "@/lib/officials/profile-url";
 import Link from "next/link";
 
 export function DashboardView() {
@@ -128,7 +129,11 @@ export function DashboardView() {
         ) : (
           <div className="space-y-3">
             {reps.map((rep) => (
-              <RepresentativeCard key={rep.bioguideId} rep={rep} />
+              <RepresentativeCard
+                key={rep.bioguideId}
+                rep={rep}
+                href={officialProfilePath(rep.bioguideId)}
+              />
             ))}
           </div>
         )}

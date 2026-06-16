@@ -171,7 +171,7 @@ export function OnboardingWizard() {
     }
 
     setLoading(false);
-    router.push("/auth?next=/dashboard");
+    router.push("/auth?next=/dashboard&mode=signup");
   };
 
   return (

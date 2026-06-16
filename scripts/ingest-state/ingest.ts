@@ -17,6 +17,7 @@ import {
   buildBillChamberMap,
   buildPartyMap,
   buildSummaryMap,
+  dedupePositionRows,
   legislatorPersonIdSet,
   normalizeBillRow,
   normalizeLegislatorRow,
@@ -168,9 +169,10 @@ async function ingestSession(
   if (opts.limit) votes = votes.slice(0, opts.limit);
 
   const voteIds = new Set(votes.map((v) => v.vote_id));
-  const positions = positionRows
+  const positionsRaw = positionRows
     .map((row) => normalizePositionRow(row, partyByPersonId))
     .filter((r): r is NonNullable<typeof r> => r !== null && voteIds.has(r.vote_id));
+  const positions = dedupePositionRows(positionsRaw);
 
   const scoringVotes = votes.filter((v) => v.scoring_relevant).length;
 
@@ -185,6 +187,11 @@ async function ingestSession(
   console.log(
     `  parsed: ${bills.length} bills, ${votes.length} votes (${scoringVotes} scoring-relevant), ${positions.length} positions`,
   );
+  if (positionsRaw.length > positions.length) {
+    console.log(
+      `  positions deduped: ${positionsRaw.length} → ${positions.length} (${positionsRaw.length - positions.length} duplicate rows merged)`,
+    );
+  }
 
   if (!opts.billsOnly) {
     await ensureStubLegislators(supabase, stubs, knownPersonIds, opts.dryRun);
@@ -246,7 +253,9 @@ async function ingestSession(
 
     for (let i = 0; i < positions.length; i += POSITION_BATCH) {
       const chunk = positions.slice(i, i + POSITION_BATCH);
-      const { error } = await supabase!.from("state_roll_call_positions").insert(chunk);
+      const { error } = await supabase!.from("state_roll_call_positions").upsert(chunk, {
+        onConflict: "vote_id,person_id",
+      });
       if (error) {
         errors++;
         if (errors <= 3) console.error("  position insert error:", error.message);

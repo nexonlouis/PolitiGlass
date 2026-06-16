@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  isOpenStatesSessionFolderName,
+  sessionMatchesYear,
+} from "../../lib/openstates-session-filters.js";
 import { peopleJsonPath, resolveDataRoot, sessionDir, stateDir } from "./paths.js";
 
 export interface IngestCliOptions {
@@ -97,14 +101,10 @@ function sessionMatchesFilters(
 ): boolean {
   if (opts.session) return sessionId === opts.session;
   if (opts.year === undefined) return true;
-  const yearStr = String(opts.year);
-  if (!sessionId.startsWith(yearStr)) return false;
-  if (opts.regularSessionOnly) return sessionId === yearStr;
-  return true;
-}
-
-function isSessionFolderName(name: string): boolean {
-  return /^[0-9]{4}[A-Z]?$/.test(name);
+  return sessionMatchesYear(sessionId, opts.year, {
+    includeSpecialSessions: !opts.regularSessionOnly,
+    regularSessionOnly: opts.regularSessionOnly,
+  });
 }
 
 export async function discoverSessionBundles(
@@ -127,7 +127,7 @@ export async function discoverSessionBundles(
   const skipped: string[] = [];
 
   for (const sessionId of entries) {
-    if (!isSessionFolderName(sessionId)) continue;
+    if (!isOpenStatesSessionFolderName(sessionId)) continue;
 
     const dir = sessionDir(dataRoot, opts.state, sessionId);
     let files: string[];

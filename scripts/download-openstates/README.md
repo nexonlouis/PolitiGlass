@@ -78,7 +78,15 @@ data/openstates/
 | `--year 2026 --include-special-sessions` | `2026`, `2026D`, `2026E`, `2026F`, … |
 | `--session 2026D` | `2026D` only |
 
-Some states use biennium identifiers (e.g. `20252026`); use `--session` when `--year` does not match.
+Some states use biennium identifiers instead of a single calendar year:
+
+| State | Regular session id | Example command |
+|-------|-------------------|-----------------|
+| FL | `2026` | `npm run download -- --state FL --year 2026` |
+| GA | `2025_26` (2025–2026) | `npm run download -- --state GA --year 2026` |
+| GA special | `2023_ss` | `npm run download -- --state GA --year 2023 --include-special-sessions` |
+
+`--year 2026` matches any regular session that spans that year (including biennium ids). Use `--session 2025_26` when you want one session explicitly.
 
 **Ingest:** `scripts/ingest-state --year 2026` picks up every matching session folder on disk (including specials if you downloaded them). Use `--regular-session-only` on ingest to load only `2026`.
 

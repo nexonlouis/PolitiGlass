@@ -22,13 +22,13 @@ steps:
       - --build-arg
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}
       - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$BUILD_ID
       - .
 
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$BUILD_ID
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
@@ -37,19 +37,22 @@ steps:
       - deploy
       - ${_SERVICE}
       - --image
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$BUILD_ID
       - --region
       - ${_REGION}
       - --platform
       - managed
       - --allow-unauthenticated
+      - --no-invoker-iam-check
       - --port
       - "8080"
       - --memory
       - 512Mi
+      - --set-secrets=SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,CONGRESS_GOV_API_KEY=CONGRESS_GOV_API_KEY:latest
+      - --set-env-vars=CONGRESS_NUMBER=119,POLITIGLASS_DEMO_MODE=false
 
 images:
-  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/politiglass/${_SERVICE}:$BUILD_ID
 
 options:
   logging: CLOUD_LOGGING_ONLY

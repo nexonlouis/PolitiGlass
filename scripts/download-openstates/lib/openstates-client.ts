@@ -1,5 +1,7 @@
 import { jurisdictionId } from "./paths.js";
 
+export { filterSessions } from "../../lib/openstates-session-filters.js";
+
 const API_ROOT = "https://v3.openstates.org";
 
 export interface LegislativeSessionDownload {
@@ -150,34 +152,4 @@ export function pickSessionCsvDownload(session: LegislativeSession): string | nu
   const downloads = session.downloads ?? [];
   const csv = downloads.find((d) => d.url?.includes("_csv_") || d.url?.endsWith(".zip"));
   return csv?.url ?? downloads[0]?.url ?? null;
-}
-
-export function filterSessions(
-  sessions: LegislativeSession[],
-  opts: {
-    year?: number;
-    session?: string;
-    includeSpecialSessions: boolean;
-  },
-): LegislativeSession[] {
-  if (opts.session) {
-    const match = sessions.filter((s) => s.identifier === opts.session);
-    if (match.length === 0) {
-      throw new Error(`Session not found: ${opts.session}`);
-    }
-    return match;
-  }
-
-  if (opts.year === undefined) {
-    return sessions;
-  }
-
-  const yearStr = String(opts.year);
-
-  return sessions.filter((s) => {
-    const id = s.identifier;
-    if (!id.startsWith(yearStr)) return false;
-    if (opts.includeSpecialSessions) return true;
-    return id === yearStr;
-  });
 }

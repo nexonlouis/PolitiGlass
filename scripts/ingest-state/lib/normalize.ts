@@ -154,6 +154,59 @@ export function normalizePositionRow(
   };
 }
 
+export interface PositionRow {
+  vote_id: string;
+  person_id: string;
+  position: string;
+  party: string | null;
+}
+
+const POSITION_PRIORITY: Record<string, number> = {
+  Yea: 4,
+  Nay: 3,
+  Present: 2,
+  "Not Voting": 1,
+};
+
+/** Merge duplicate (vote_id, person_id) rows — common in GA bulk exports. */
+export function dedupePositionRows(positions: PositionRow[]): PositionRow[] {
+  const byKey = new Map<string, PositionRow[]>();
+
+  for (const row of positions) {
+    const key = `${row.vote_id}\0${row.person_id}`;
+    const group = byKey.get(key);
+    if (group) group.push(row);
+    else byKey.set(key, [row]);
+  }
+
+  const deduped: PositionRow[] = [];
+  for (const group of byKey.values()) {
+    deduped.push(group.length === 1 ? group[0]! : pickBestPositionRow(group));
+  }
+
+  return deduped;
+}
+
+function pickBestPositionRow(group: PositionRow[]): PositionRow {
+  const counts = new Map<string, number>();
+  for (const row of group) {
+    counts.set(row.position, (counts.get(row.position) ?? 0) + 1);
+  }
+
+  let bestPosition = group[0]!.position;
+  let bestScore = -1;
+  for (const [position, count] of counts) {
+    const score = count * 10 + (POSITION_PRIORITY[position] ?? 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestPosition = position;
+    }
+  }
+
+  const template = group.find((row) => row.position === bestPosition) ?? group[0]!;
+  return { ...template, position: bestPosition };
+}
+
 export function buildSummaryMap(rows: Record<string, string>[]): Map<string, string> {
   const map = new Map<string, string>();
   for (const row of rows) {
